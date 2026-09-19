@@ -1,0 +1,6 @@
+{
+  "name": "Referto Pallamano Digitale & Segnapunti FIGH",
+  "description": "Segnapunti e referto digitale da bordocampo per pallamano (Serie B, U18, U16, U14 format MHC FIGH 2026/2027) con gestione tempi, cartellini, sospensioni 2' ed esportazione PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
