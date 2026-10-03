@@ -256,7 +256,7 @@ export const TeamRosterPanel: React.FC<TeamRosterPanelProps> = ({
       {/* Inline Quick Add Player Form */}
       {isAddingPlayer && (
         <form onSubmit={handleSaveNewPlayer} className="my-2 p-2.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-2 animate-in fade-in">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
             <input
               type="number"
               min="1"
@@ -264,7 +264,7 @@ export const TeamRosterPanel: React.FC<TeamRosterPanelProps> = ({
               placeholder="N°"
               value={newNumber}
               onChange={(e) => setNewNumber(e.target.value)}
-              className="w-16 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-amber-400"
+              className="w-14 sm:w-16 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-amber-400"
               required
             />
             <input

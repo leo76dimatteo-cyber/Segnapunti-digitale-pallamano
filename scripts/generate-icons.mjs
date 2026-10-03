@@ -1,0 +1,172 @@
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+
+const svgStandard = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="ballGrad" x1="20%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.6" />
+    </filter>
+  </defs>
+
+  <!-- Background base -->
+  <rect width="512" height="512" rx="104" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="100" fill="none" stroke="#1e293b" stroke-width="4" />
+
+  <!-- Handball goal dynamic arches / court circle -->
+  <path d="M 64 256 A 192 192 0 0 1 448 256" fill="none" stroke="#334155" stroke-width="6" stroke-dasharray="12 12" />
+  <path d="M 112 432 L 112 160 L 400 160 L 400 432" fill="none" stroke="url(#glowGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />
+
+  <!-- Handball sphere with shadow -->
+  <g filter="url(#shadow)">
+    <!-- Ball body -->
+    <circle cx="256" cy="256" r="140" fill="url(#ballGrad)" />
+    
+    <!-- Ball seam panels (Handball 32-panel pattern) -->
+    <g fill="none" stroke="#78350f" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+      <!-- Center pentagon / curved patch -->
+      <path d="M 256 200 L 296 230 L 280 278 L 232 278 L 216 230 Z" fill="#b45309" fill-opacity="0.25" />
+      
+      <!-- Seam lines radiating from center patch -->
+      <path d="M 256 200 L 256 116" />
+      <path d="M 296 230 L 372 194" />
+      <path d="M 280 278 L 338 348" />
+      <path d="M 232 278 L 174 348" />
+      <path d="M 216 230 L 140 194" />
+
+      <!-- Outer connecting seams -->
+      <path d="M 256 116 C 304 120 348 150 372 194" />
+      <path d="M 372 194 C 390 240 380 290 338 348" />
+      <path d="M 338 348 C 290 384 222 384 174 348" />
+      <path d="M 174 348 C 132 290 122 240 140 194" />
+      <path d="M 140 194 C 164 150 208 120 256 116" />
+    </g>
+
+    <!-- Specular highlight reflection -->
+    <path d="M 190 160 C 230 135 285 140 310 160 C 280 152 230 152 190 160 Z" fill="#ffffff" opacity="0.45" />
+    <circle cx="210" cy="180" r="16" fill="#ffffff" opacity="0.35" />
+  </g>
+
+  <!-- FIGH & Handball badge emblem banner -->
+  <g transform="translate(0, 38)">
+    <rect x="146" y="380" width="220" height="42" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="2.5" />
+    <text x="256" y="408" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="20" fill="#f8fafc" letter-spacing="3">FIGH SCORER</text>
+  </g>
+</svg>`;
+
+const svgMaskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="mBallGrad" x1="20%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="mGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full bleed background for maskable (safe zone is central 80%) -->
+  <rect width="512" height="512" fill="url(#mBgGrad)" />
+
+  <!-- Centered within 78% safe area -->
+  <g transform="translate(256, 256) scale(0.76) translate(-256, -256)">
+    <!-- Goal frame -->
+    <path d="M 96 440 L 96 140 L 416 140 L 416 440" fill="none" stroke="url(#mGlowGrad)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" />
+
+    <!-- Ball -->
+    <circle cx="256" cy="256" r="140" fill="url(#mBallGrad)" />
+    
+    <!-- Seams -->
+    <g fill="none" stroke="#78350f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+      <path d="M 256 200 L 296 230 L 280 278 L 232 278 L 216 230 Z" fill="#b45309" fill-opacity="0.25" />
+      <path d="M 256 200 L 256 116" />
+      <path d="M 296 230 L 372 194" />
+      <path d="M 280 278 L 338 348" />
+      <path d="M 232 278 L 174 348" />
+      <path d="M 216 230 L 140 194" />
+      <path d="M 256 116 C 304 120 348 150 372 194" />
+      <path d="M 372 194 C 390 240 380 290 338 348" />
+      <path d="M 338 348 C 290 384 222 384 174 348" />
+      <path d="M 174 348 C 132 290 122 240 140 194" />
+      <path d="M 140 194 C 164 150 208 120 256 116" />
+    </g>
+
+    <path d="M 190 160 C 230 135 285 140 310 160 C 280 152 230 152 190 160 Z" fill="#ffffff" opacity="0.45" />
+    <circle cx="210" cy="180" r="16" fill="#ffffff" opacity="0.35" />
+
+    <!-- FIGH Text banner -->
+    <rect x="146" y="380" width="220" height="44" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="3" />
+    <text x="256" y="410" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="20" fill="#f8fafc" letter-spacing="3">FIGH SCORER</text>
+  </g>
+</svg>`;
+
+async function generate() {
+  const publicDir = path.resolve('public');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+
+  // Write SVG files
+  fs.writeFileSync(path.join(publicDir, 'icon.svg'), svgStandard);
+
+  // Generate PNG 192x192
+  await sharp(Buffer.from(svgStandard))
+    .resize(192, 192)
+    .png()
+    .toFile(path.join(publicDir, 'pwa-192x192.png'));
+  console.log('Generated pwa-192x192.png');
+
+  // Generate PNG 512x512
+  await sharp(Buffer.from(svgStandard))
+    .resize(512, 512)
+    .png()
+    .toFile(path.join(publicDir, 'pwa-512x512.png'));
+  console.log('Generated pwa-512x512.png');
+
+  // Generate Maskable 512x512
+  await sharp(Buffer.from(svgMaskable))
+    .resize(512, 512)
+    .png()
+    .toFile(path.join(publicDir, 'pwa-maskable-512x512.png'));
+  console.log('Generated pwa-maskable-512x512.png');
+
+  // Generate Apple Touch Icon 180x180
+  await sharp(Buffer.from(svgStandard))
+    .resize(180, 180)
+    .png()
+    .toFile(path.join(publicDir, 'apple-touch-icon.png'));
+  console.log('Generated apple-touch-icon.png');
+
+  // Generate favicon.png 64x64 and favicon.ico
+  await sharp(Buffer.from(svgStandard))
+    .resize(64, 64)
+    .png()
+    .toFile(path.join(publicDir, 'favicon.ico'));
+  console.log('Generated favicon.ico');
+}
+
+generate().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

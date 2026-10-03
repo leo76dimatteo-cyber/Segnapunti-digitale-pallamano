@@ -98,37 +98,37 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <button
               onClick={handleCopySummary}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border border-slate-700"
+              className="px-2.5 sm:px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border border-slate-700"
               title="Copia riassunto per WhatsApp o social"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4 text-amber-400" />}
-              <span>{copied ? 'Copiato!' : 'Condividi'}</span>
+              <span className="hidden sm:inline">{copied ? 'Copiato!' : 'Condividi'}</span>
             </button>
 
             <button
               onClick={handlePrintNative}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border border-slate-700"
+              className="px-2.5 sm:px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border border-slate-700"
               title="Stampa con la finestra nativa del browser (funziona 100% offline)"
             >
               <Printer className="w-4 h-4 text-cyan-400" />
-              <span>Stampa A4</span>
+              <span className="hidden sm:inline">Stampa A4</span>
             </button>
 
             <button
               onClick={handleDownloadPDF}
-              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition active:scale-95"
+              className="px-3 sm:px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition active:scale-95"
               title="Scarica referto in formato PDF vettoriale"
             >
               <Download className="w-4 h-4" />
-              <span>Scarica PDF</span>
+              <span><span className="hidden sm:inline">Scarica </span>PDF</span>
             </button>
 
             <button
               onClick={() => exportStandaloneHTML(matchState)}
-              className="px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95"
+              className="px-2.5 sm:px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95"
               title="Scarica come file HTML singolo"
             >
               <FileCode className="w-4 h-4" />
@@ -137,11 +137,11 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
 
             <button
               onClick={() => exportMatchJson(matchState)}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95"
+              className="px-2.5 sm:px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95"
               title="Salva ed esporta la partita completa in formato JSON"
             >
               <FileJson className="w-4 h-4 text-amber-400" />
-              <span>Partita JSON</span>
+              <span><span className="hidden sm:inline">Partita </span>JSON</span>
             </button>
 
             <button

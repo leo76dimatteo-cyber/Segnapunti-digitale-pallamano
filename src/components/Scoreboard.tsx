@@ -54,7 +54,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-600 via-amber-500 to-blue-600 opacity-80" />
 
       {/* Period and Match Phase Header */}
-      <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800/80">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2">
           <span className="flex h-2.5 w-2.5 relative">
             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${
@@ -86,7 +86,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
           </div>
         )}
 
-        {/* Timeout indicators */}
+        {/* Period advance / status button */}
         <div className="flex items-center gap-2">
           <button
             onClick={onClosePeriodOrNext}
@@ -114,10 +114,10 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
         </div>
       </div>
 
-      {/* Main Scoreboard Layout: Home Team | Timer & Period | Away Team */}
+      {/* Main Scoreboard Layout: On mobile portrait, Timer is full-width on top (order-1), Home (order-2) & Away (order-3) 50% each side-by-side. On desktop (sm+), 3 equal columns side-by-side */}
       <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center">
         {/* HOME TEAM COLUMN */}
-        <div className="col-span-5 sm:col-span-4 flex flex-col items-center text-center p-2 sm:p-3 rounded-2xl bg-slate-950/60 border border-red-900/30">
+        <div className="col-span-6 sm:col-span-4 order-2 sm:order-1 flex flex-col items-center text-center p-2 sm:p-3 rounded-2xl bg-slate-950/60 border border-red-900/30">
           <div className="flex items-center gap-1.5 mb-1 max-w-full">
             <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></span>
             <span className="font-black text-sm sm:text-base text-red-400 truncate tracking-wide">
@@ -156,41 +156,42 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             <button
               id="btn-goal-home"
               onClick={() => onGoalClick('home')}
-              className="w-full min-h-[52px] sm:min-h-[64px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-lg sm:text-2xl rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
+              className="w-full min-h-[48px] sm:min-h-[64px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
               title="Aggiungi Gol Squadra Casa (+1)"
             >
-              <Plus className="w-6 h-6 stroke-[3]" />
-              <span>GOL CASA</span>
+              <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
+              <span className="hidden xs:inline sm:inline">GOL CASA</span>
+              <span className="xs:hidden sm:hidden">+1 GOL</span>
             </button>
 
             <div className="grid grid-cols-2 gap-1.5 w-full">
               <button
                 onClick={() => onOpenSanctionModal('home')}
-                className="py-2 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Assegna sanzione o cartellino a Casa"
               >
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                <span>Cartellino</span>
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span className="truncate">Cartellino</span>
               </button>
               <button
                 onClick={() => onTriggerTimeout('home')}
-                className="py-2 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Chiama Time-Out 1 minuto per Casa"
               >
-                <Clock className="w-3.5 h-3.5 text-blue-400" />
-                <span>Time-Out</span>
+                <Clock className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                <span className="truncate">Time-Out</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* CENTER COLUMN: TIMER, CONTROLS, UNDO */}
-        <div className="col-span-2 sm:col-span-4 flex flex-col items-center justify-center text-center px-1">
+        {/* CENTER COLUMN: TIMER, CONTROLS, UNDO (Full width on mobile top, center column on desktop) */}
+        <div className="col-span-12 sm:col-span-4 order-1 sm:order-2 flex flex-col items-center justify-center text-center p-2.5 sm:p-0 bg-slate-950/40 sm:bg-transparent rounded-2xl border border-slate-800/60 sm:border-0 mb-1 sm:mb-0">
           {/* Main Digital Match Clock */}
           <div className="flex flex-col items-center">
             <div 
               id="match-clock-display"
-              className={`text-3xl sm:text-5xl md:text-6xl font-black font-mono tracking-wider select-none ${
+              className={`text-4xl sm:text-5xl md:text-6xl font-black font-mono tracking-wider select-none ${
                 matchState.periodSecondsRemaining <= 60 && matchState.periodSecondsRemaining > 0
                   ? 'text-amber-400 animate-pulse'
                   : matchState.periodSecondsRemaining === 0
@@ -208,11 +209,11 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
           </div>
 
           {/* Timer Action Buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2 mt-3">
+          <div className="flex items-center gap-2 mt-2 sm:mt-3">
             <button
               id="btn-timer-toggle"
               onClick={onToggleTimer}
-              className={`min-w-[48px] h-12 sm:h-14 px-3 sm:px-5 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition active:scale-95 ${
+              className={`min-w-[120px] sm:min-w-[130px] h-11 sm:h-14 px-4 sm:px-5 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition active:scale-95 ${
                 matchState.isTimerRunning
                   ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
@@ -222,12 +223,12 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
               {matchState.isTimerRunning ? (
                 <>
                   <Pause className="w-5 h-5 fill-current" />
-                  <span className="hidden sm:inline">PAUSA</span>
+                  <span>PAUSA</span>
                 </>
               ) : (
                 <>
                   <Play className="w-5 h-5 fill-current" />
-                  <span className="hidden sm:inline">AVVIA</span>
+                  <span>AVVIA</span>
                 </>
               )}
             </button>
@@ -235,42 +236,42 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             <button
               id="btn-timer-reset"
               onClick={onResetTimer}
-              className="w-10 sm:w-12 h-12 sm:h-14 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl flex items-center justify-center border border-slate-700 transition active:scale-95"
+              className="w-11 sm:w-12 h-11 sm:h-14 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl flex items-center justify-center border border-slate-700 transition active:scale-95"
               title="Azzera tempo del periodo"
             >
               <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
-          {/* Time adjustment (+1m / -1m) */}
-          <div className="flex items-center gap-1 mt-2">
+          {/* Time adjustment (+1m / -1m / +10s / -10s) */}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap justify-center">
             <button
               onClick={() => onAdjustTime(-60)}
-              className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg text-[10px] font-mono border border-slate-700 transition"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
               title="Sottrai 1 minuto"
             >
-              -1 min
+              -1m
             </button>
             <button
               onClick={() => onAdjustTime(-10)}
-              className="px-1.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg text-[10px] font-mono border border-slate-700 transition"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
               title="Sottrai 10 secondi"
             >
               -10s
             </button>
             <button
               onClick={() => onAdjustTime(10)}
-              className="px-1.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg text-[10px] font-mono border border-slate-700 transition"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
               title="Aggiungi 10 secondi"
             >
               +10s
             </button>
             <button
               onClick={() => onAdjustTime(60)}
-              className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg text-[10px] font-mono border border-slate-700 transition"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
               title="Aggiungi 1 minuto"
             >
-              +1 min
+              +1m
             </button>
           </div>
 
@@ -279,11 +280,11 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             <button
               id="btn-undo-last-goal"
               onClick={onUndoLastGoal}
-              className="mt-3 flex items-center gap-1 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 text-xs font-semibold rounded-xl border border-slate-700 transition active:scale-95 shadow-sm"
+              className="mt-2.5 flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-amber-300 text-xs font-semibold rounded-xl border border-slate-700 transition shadow-sm max-w-full truncate"
               title="Annulla l'ultimo gol segnato (correzione errori)"
             >
-              <Undo2 className="w-3.5 h-3.5" />
-              <span className="truncate max-w-[130px]">
+              <Undo2 className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">
                 Annulla Gol ({lastGoal?.team === 'home' ? matchState.homeTeam.shortName : matchState.awayTeam.shortName})
               </span>
             </button>
@@ -291,7 +292,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
         </div>
 
         {/* AWAY TEAM COLUMN */}
-        <div className="col-span-5 sm:col-span-4 flex flex-col items-center text-center p-2 sm:p-3 rounded-2xl bg-slate-950/60 border border-blue-900/30">
+        <div className="col-span-6 sm:col-span-4 order-3 sm:order-3 flex flex-col items-center text-center p-2 sm:p-3 rounded-2xl bg-slate-950/60 border border-blue-900/30">
           <div className="flex items-center gap-1.5 mb-1 max-w-full">
             <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></span>
             <span className="font-black text-sm sm:text-base text-blue-400 truncate tracking-wide">
@@ -330,29 +331,30 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             <button
               id="btn-goal-away"
               onClick={() => onGoalClick('away')}
-              className="w-full min-h-[52px] sm:min-h-[64px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-lg sm:text-2xl rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
+              className="w-full min-h-[48px] sm:min-h-[64px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
               title="Aggiungi Gol Squadra Ospiti (+1)"
             >
-              <Plus className="w-6 h-6 stroke-[3]" />
-              <span>GOL OSPITI</span>
+              <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
+              <span className="hidden xs:inline sm:inline">GOL OSPITI</span>
+              <span className="xs:hidden sm:hidden">+1 GOL</span>
             </button>
 
             <div className="grid grid-cols-2 gap-1.5 w-full">
               <button
                 onClick={() => onOpenSanctionModal('away')}
-                className="py-2 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Assegna sanzione o cartellino a Ospiti"
               >
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                <span>Cartellino</span>
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span className="truncate">Cartellino</span>
               </button>
               <button
                 onClick={() => onTriggerTimeout('away')}
-                className="py-2 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Chiama Time-Out 1 minuto per Ospiti"
               >
-                <Clock className="w-3.5 h-3.5 text-blue-400" />
-                <span>Time-Out</span>
+                <Clock className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                <span className="truncate">Time-Out</span>
               </button>
             </div>
           </div>

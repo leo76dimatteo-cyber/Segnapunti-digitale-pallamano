@@ -70,7 +70,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Tab switcher */}
-        <div className="flex items-center gap-2 mt-4 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-1.5 sm:gap-2 mt-4 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
           <button
             type="button"
             onClick={() => setActiveTab('category')}
@@ -78,8 +78,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               activeTab === 'category' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Trophy className="w-3.5 h-3.5" />
-            <span>Categoria &amp; Tempi</span>
+            <Trophy className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate"><span className="hidden sm:inline">Categoria &amp; </span>Tempi</span>
           </button>
           <button
             type="button"
@@ -88,8 +88,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               activeTab === 'teams' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Squadre &amp; Colori</span>
+            <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">Squadre<span className="hidden sm:inline"> &amp; Colori</span></span>
           </button>
           <button
             type="button"
@@ -98,8 +98,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               activeTab === 'match_info' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>Referto &amp; Ufficiali</span>
+            <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate"><span className="hidden sm:inline">Referto &amp; </span>Ufficiali</span>
           </button>
         </div>
 

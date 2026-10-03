@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "Referto Pallamano Digitale & Segnapunti FIGH",
+  "short_name": "FIGH Scorer",
+  "description": "Segnapunti e referto digitale da bordocampo per pallamano (Serie B, U18, U16, U14 format MHC FIGH 2026/2027) con gestione tempi, cartellini, sospensioni 2' ed esportazione PDF.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#020617",
+  "categories": ["sports", "utilities"],
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

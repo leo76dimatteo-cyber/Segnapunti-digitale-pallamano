@@ -51,21 +51,21 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 py-2 sm:px-4 sm:py-3 shadow-lg">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
         {/* Brand & Category info */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
-            <Trophy className="w-5 h-5" />
+        <div className="flex items-center gap-2 min-w-0 flex-shrink">
+          <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-950 border border-amber-500/40 flex items-center justify-center text-white shadow-md shadow-amber-500/10 overflow-hidden p-0.5">
+            <img src="/icon.svg" alt="FIGH Logo" className="w-full h-full object-contain" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-white truncate">
+              <h1 className="font-extrabold text-xs sm:text-base tracking-tight text-white truncate">
                 Handball Scorer <span className="text-amber-400 font-mono text-xs">FIGH</span>
               </h1>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${
+              <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wide uppercase ${
                 currentCategory.isU14Format 
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
                   : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
               }`}>
-                {currentCategory.id === 'under_14' ? 'U14 (MHC FIGH)' : currentCategory.name}
+                {currentCategory.id === 'under_14' ? 'U14' : currentCategory.name}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 truncate hidden sm:block">
@@ -75,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Quick action controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* PWA Install */}
           <PWAInstallButton />
 
