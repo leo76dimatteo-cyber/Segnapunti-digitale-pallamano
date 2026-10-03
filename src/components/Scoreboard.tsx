@@ -1,21 +1,25 @@
 import React from 'react';
 import { MatchState } from '../types';
 import { CATEGORIES } from '../utils/categories';
+import { sound } from '../utils/sound';
 import { 
   Play, 
   Pause, 
   RotateCcw, 
   Plus, 
+  Minus,
   Undo2, 
   Clock, 
   ShieldAlert, 
   ArrowRight,
-  Award
+  Award,
+  Volume2
 } from 'lucide-react';
 
 interface ScoreboardProps {
   matchState: MatchState;
   onGoalClick: (team: 'home' | 'away') => void;
+  onSubtractGoal: (team: 'home' | 'away') => void;
   onUndoLastGoal: () => void;
   onToggleTimer: () => void;
   onResetTimer: () => void;
@@ -28,6 +32,7 @@ interface ScoreboardProps {
 export const Scoreboard: React.FC<ScoreboardProps> = ({
   matchState,
   onGoalClick,
+  onSubtractGoal,
   onUndoLastGoal,
   onToggleTimer,
   onResetTimer,
@@ -153,16 +158,29 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
 
           {/* Action buttons for Home: Goal + Sanction + Timeout */}
           <div className="w-full mt-2 space-y-2">
-            <button
-              id="btn-goal-home"
-              onClick={() => onGoalClick('home')}
-              className="w-full min-h-[48px] sm:min-h-[64px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
-              title="Aggiungi Gol Squadra Casa (+1)"
-            >
-              <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
-              <span className="hidden xs:inline sm:inline">GOL CASA</span>
-              <span className="xs:hidden sm:hidden">+1 GOL</span>
-            </button>
+            <div className="flex items-center gap-1.5 w-full">
+              <button
+                id="btn-goal-home"
+                onClick={() => onGoalClick('home')}
+                className="flex-1 min-h-[48px] sm:min-h-[64px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
+                title="Aggiungi Gol Squadra Casa (+1)"
+              >
+                <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
+                <span className="hidden xs:inline sm:inline">GOL CASA</span>
+                <span className="xs:hidden sm:hidden">+1 GOL</span>
+              </button>
+
+              <button
+                id="btn-subtract-goal-home"
+                onClick={() => onSubtractGoal('home')}
+                disabled={(isU14 ? matchState.homePeriodGoals : matchState.homeTotalGoals) <= 0}
+                className="w-12 sm:w-14 min-h-[48px] sm:min-h-[64px] bg-red-950/80 hover:bg-red-900 border border-red-800/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-red-200 font-black text-base sm:text-lg rounded-2xl flex items-center justify-center gap-0.5 transition select-none shadow-md shadow-red-950/40"
+                title="Sottrai 1 Gol a Casa (-1 GOL)"
+              >
+                <Minus className="w-4 h-4 stroke-[3]" />
+                <span className="text-xs sm:text-sm font-bold">1</span>
+              </button>
+            </div>
 
             <div className="grid grid-cols-2 gap-1.5 w-full">
               <button
@@ -240,6 +258,15 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
               title="Azzera tempo del periodo"
             >
               <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
+            <button
+              id="btn-manual-buzzer"
+              onClick={() => sound.playBuzzer()}
+              className="w-11 sm:w-12 h-11 sm:h-14 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center transition active:scale-95 shadow-sm"
+              title="Suona Sirena da Tavolo / Campo ad alto volume"
+            >
+              <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
@@ -328,16 +355,29 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
 
           {/* Action buttons for Away: Goal + Sanction + Timeout */}
           <div className="w-full mt-2 space-y-2">
-            <button
-              id="btn-goal-away"
-              onClick={() => onGoalClick('away')}
-              className="w-full min-h-[48px] sm:min-h-[64px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
-              title="Aggiungi Gol Squadra Ospiti (+1)"
-            >
-              <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
-              <span className="hidden xs:inline sm:inline">GOL OSPITI</span>
-              <span className="xs:hidden sm:hidden">+1 GOL</span>
-            </button>
+            <div className="flex items-center gap-1.5 w-full">
+              <button
+                id="btn-goal-away"
+                onClick={() => onGoalClick('away')}
+                className="flex-1 min-h-[48px] sm:min-h-[64px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
+                title="Aggiungi Gol Squadra Ospiti (+1)"
+              >
+                <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
+                <span className="hidden xs:inline sm:inline">GOL OSPITI</span>
+                <span className="xs:hidden sm:hidden">+1 GOL</span>
+              </button>
+
+              <button
+                id="btn-subtract-goal-away"
+                onClick={() => onSubtractGoal('away')}
+                disabled={(isU14 ? matchState.awayPeriodGoals : matchState.awayTotalGoals) <= 0}
+                className="w-12 sm:w-14 min-h-[48px] sm:min-h-[64px] bg-blue-950/80 hover:bg-blue-900 border border-blue-800/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-blue-200 font-black text-base sm:text-lg rounded-2xl flex items-center justify-center gap-0.5 transition select-none shadow-md shadow-blue-950/40"
+                title="Sottrai 1 Gol a Ospiti (-1 GOL)"
+              >
+                <Minus className="w-4 h-4 stroke-[3]" />
+                <span className="text-xs sm:text-sm font-bold">1</span>
+              </button>
+            </div>
 
             <div className="grid grid-cols-2 gap-1.5 w-full">
               <button

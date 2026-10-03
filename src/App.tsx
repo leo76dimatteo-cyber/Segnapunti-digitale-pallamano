@@ -303,6 +303,48 @@ export default function App() {
     });
   };
 
+  // Subtract One Goal for specific team (-1 GOL)
+  const handleSubtractGoal = (team: 'home' | 'away') => {
+    const isHome = team === 'home';
+    const currentPeriodScore = isHome ? matchState.homePeriodGoals : matchState.awayPeriodGoals;
+    const currentTotalScore = isHome ? matchState.homeTotalGoals : matchState.awayTotalGoals;
+
+    if (currentPeriodScore <= 0 && currentTotalScore <= 0) return;
+
+    if (matchState.settings.soundEnabled) {
+      sound.playWarningBeep();
+    }
+
+    setMatchState(prev => {
+      let newGoals = [...prev.goals];
+      const periodGoalsForTeam = newGoals.filter(g => g.team === team && g.period === prev.currentPeriod);
+      if (periodGoalsForTeam.length > 0) {
+        const lastGoalId = periodGoalsForTeam[periodGoalsForTeam.length - 1].id;
+        newGoals = newGoals.filter(g => g.id !== lastGoalId);
+      } else {
+        const anyGoalsForTeam = newGoals.filter(g => g.team === team);
+        if (anyGoalsForTeam.length > 0) {
+          const lastGoalId = anyGoalsForTeam[anyGoalsForTeam.length - 1].id;
+          newGoals = newGoals.filter(g => g.id !== lastGoalId);
+        }
+      }
+
+      const newHomePeriod = isHome ? Math.max(0, prev.homePeriodGoals - 1) : prev.homePeriodGoals;
+      const newAwayPeriod = !isHome ? Math.max(0, prev.awayPeriodGoals - 1) : prev.awayPeriodGoals;
+      const newHomeTotal = isHome ? Math.max(0, prev.homeTotalGoals - 1) : prev.homeTotalGoals;
+      const newAwayTotal = !isHome ? Math.max(0, prev.awayTotalGoals - 1) : prev.awayTotalGoals;
+
+      return {
+        ...prev,
+        homePeriodGoals: newHomePeriod,
+        awayPeriodGoals: newAwayPeriod,
+        homeTotalGoals: newHomeTotal,
+        awayTotalGoals: newAwayTotal,
+        goals: newGoals,
+      };
+    });
+  };
+
   // Delete individual goal from log
   const handleDeleteGoal = (goalId: string) => {
     setMatchState(prev => {
@@ -753,6 +795,7 @@ export default function App() {
         <Scoreboard
           matchState={matchState}
           onGoalClick={handleGoalClick}
+          onSubtractGoal={handleSubtractGoal}
           onUndoLastGoal={handleUndoLastGoal}
           onToggleTimer={handleToggleTimer}
           onResetTimer={handleResetTimer}

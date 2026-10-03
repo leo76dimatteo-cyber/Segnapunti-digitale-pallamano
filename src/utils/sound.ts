@@ -1,10 +1,12 @@
 /**
- * Pure Web Audio API Sound Synthesizer
- * Zero-dependency, 100% offline-ready acoustic alerts for Handball Scorers.
+ * Pure Web Audio API Sound Synthesizer for Handball Arenas
+ * Zero-dependency, 100% offline-ready high-volume acoustic alerts and horns.
  */
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
+  private masterGain: GainNode | null = null;
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -20,116 +22,207 @@ class SoundEngine {
     return this.ctx;
   }
 
+  private getMaster(ctx: AudioContext): GainNode {
+    if (!this.compressor || !this.masterGain) {
+      // Dynamic compressor to maximize acoustic loudness and punch without clipping
+      this.compressor = ctx.createDynamicsCompressor();
+      this.compressor.threshold.setValueAtTime(-4, ctx.currentTime);
+      this.compressor.knee.setValueAtTime(2, ctx.currentTime);
+      this.compressor.ratio.setValueAtTime(10, ctx.currentTime);
+      this.compressor.attack.setValueAtTime(0.002, ctx.currentTime);
+      this.compressor.release.setValueAtTime(0.2, ctx.currentTime);
+
+      this.masterGain = ctx.createGain();
+      this.masterGain.gain.setValueAtTime(1.0, ctx.currentTime); // 100% maximum digital level
+
+      this.masterGain.connect(this.compressor);
+      this.compressor.connect(ctx.destination);
+    }
+    return this.masterGain;
+  }
+
   /**
-   * Classic Gym Buzzer / Siren (Sirena fine tempo / sirena campo)
+   * Powerful Official Gym Horn / Buzzer (Sirena Palazzetto dello Sport)
+   * Multi-oscillator electric acoustic horn: sub-octave, fundamental and detuned harmonics.
    */
   playBuzzer() {
     try {
       const ctx = this.getContext();
       if (!ctx) return;
+      const master = this.getMaster(ctx);
 
+      const now = ctx.currentTime;
+      const duration = 1.6;
+
+      // Sub fundamental (punch)
+      const subOsc = ctx.createOscillator();
+      subOsc.type = 'sawtooth';
+      subOsc.frequency.setValueAtTime(220, now);
+
+      // Primary horn tone (A4)
       const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gain = ctx.createGain();
-
       osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(440, now);
+
+      // Detuned horn tone (acoustic chorus & presence)
+      const osc2 = ctx.createOscillator();
       osc2.type = 'square';
-      osc1.frequency.setValueAtTime(440, ctx.currentTime);
-      osc2.frequency.setValueAtTime(444, ctx.currentTime);
+      osc2.frequency.setValueAtTime(444, now);
 
-      gain.gain.setValueAtTime(0.35, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.2);
+      // High harmonic cut-through
+      const osc3 = ctx.createOscillator();
+      osc3.type = 'sawtooth';
+      osc3.frequency.setValueAtTime(880, now);
 
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(ctx.destination);
+      const buzzerGain = ctx.createGain();
+      buzzerGain.gain.setValueAtTime(0.01, now);
+      // Punchy attack
+      buzzerGain.gain.linearRampToValueAtTime(0.95, now + 0.04);
+      // High volume sustain
+      buzzerGain.gain.setValueAtTime(0.95, now + duration - 0.15);
+      // Clean tail off
+      buzzerGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-      osc1.start(ctx.currentTime);
-      osc2.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 1.2);
-      osc2.stop(ctx.currentTime + 1.2);
+      subOsc.connect(buzzerGain);
+      osc1.connect(buzzerGain);
+      osc2.connect(buzzerGain);
+      osc3.connect(buzzerGain);
+      buzzerGain.connect(master);
+
+      subOsc.start(now);
+      osc1.start(now);
+      osc2.start(now);
+      osc3.start(now);
+
+      subOsc.stop(now + duration);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
+      osc3.stop(now + duration);
     } catch {
-      // Audio might be blocked by user gesture policy
+      // Audio might be blocked by browser gesture policy until user interacts
     }
   }
 
   /**
-   * Referee Whistle (Fischio arbitro)
+   * Authentic Referee Whistle with Trill (Fischio Arbitrale FIGH)
    */
   playWhistle() {
     try {
       const ctx = this.getContext();
       if (!ctx) return;
+      const master = this.getMaster(ctx);
 
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      const duration = 0.35;
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2400, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(2800, ctx.currentTime + 0.1);
-      osc.frequency.linearRampToValueAtTime(2300, ctx.currentTime + 0.25);
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const whistleGain = ctx.createGain();
 
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+      // Dual whistle resonance frequencies
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(2750, now);
+      osc1.frequency.linearRampToValueAtTime(2950, now + 0.08);
+      osc1.frequency.linearRampToValueAtTime(2650, now + duration);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(3150, now);
+      osc2.frequency.linearRampToValueAtTime(3350, now + 0.08);
+      osc2.frequency.linearRampToValueAtTime(3050, now + duration);
 
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.28);
+      // Tremolo / trill LFO to simulate pea inside referee whistle
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.setValueAtTime(32, now); // 32 Hz trill flutter
+      lfoGain.gain.setValueAtTime(120, now);
+      lfo.connect(osc1.frequency);
+      lfo.connect(osc2.frequency);
+
+      whistleGain.gain.setValueAtTime(0.05, now);
+      whistleGain.gain.linearRampToValueAtTime(0.85, now + 0.03);
+      whistleGain.gain.setValueAtTime(0.85, now + duration - 0.06);
+      whistleGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc1.connect(whistleGain);
+      osc2.connect(whistleGain);
+      whistleGain.connect(master);
+
+      lfo.start(now);
+      osc1.start(now);
+      osc2.start(now);
+
+      lfo.stop(now + duration);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
     } catch {}
   }
 
   /**
-   * Goal Beep / Ping
+   * Goal Celebration Acoustic Ping (Gol Chime ad alto volume)
    */
   playGoalSound() {
     try {
       const ctx = this.getContext();
       if (!ctx) return;
+      const master = this.getMaster(ctx);
 
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const now = ctx.currentTime;
 
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-      osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08); // E5
-      osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16); // G5
+      // Bright energetic 4-tone ascending fanfare (C5, E5, G5, C6)
+      const freqs = [523.25, 659.25, 783.99, 1046.5];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const noteGain = ctx.createGain();
+        const noteStart = now + idx * 0.07;
+        const noteDuration = 0.28;
 
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, noteStart);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+        noteGain.gain.setValueAtTime(0.01, noteStart);
+        noteGain.gain.linearRampToValueAtTime(0.85, noteStart + 0.02);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, noteStart + noteDuration);
 
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.35);
+        osc.connect(noteGain);
+        noteGain.connect(master);
+
+        osc.start(noteStart);
+        osc.stop(noteStart + noteDuration);
+      });
     } catch {}
   }
 
   /**
-   * Warning Ping (e.g. 2 min penalty ending)
+   * Warning Ping / Penalty alert (Avviso esclusioni 2 minuti e correzioni)
    */
   playWarningBeep() {
     try {
       const ctx = this.getContext();
       if (!ctx) return;
+      const master = this.getMaster(ctx);
 
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const now = ctx.currentTime;
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      // Double high-impact alert tone
+      [0, 0.1].forEach((delay) => {
+        const osc = ctx.createOscillator();
+        const beepGain = ctx.createGain();
+        const start = now + delay;
 
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(1100, start);
+        osc.frequency.exponentialRampToValueAtTime(800, start + 0.08);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+        beepGain.gain.setValueAtTime(0.01, start);
+        beepGain.gain.linearRampToValueAtTime(0.8, start + 0.015);
+        beepGain.gain.exponentialRampToValueAtTime(0.001, start + 0.08);
 
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.15);
+        osc.connect(beepGain);
+        beepGain.connect(master);
+
+        osc.start(start);
+        osc.stop(start + 0.08);
+      });
     } catch {}
   }
 }
