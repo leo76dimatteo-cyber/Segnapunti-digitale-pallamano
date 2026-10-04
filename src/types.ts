@@ -142,6 +142,29 @@ export interface MatchState {
     isRunning: boolean;
   } | null;
 
+  // Dedicated Goalkeeper Statistics (Gol Parati, Gol Subiti, Gol Fatti, Rigori 7m)
+  goalkeeperStats?: GoalkeeperStat[];
+  activeGoalkeepers?: {
+    home?: string | null;
+    away?: string | null;
+  };
+  emptyNet?: {
+    home?: boolean;
+    away?: boolean;
+  };
+
   createdAt: number;
   updatedAt: number;
 }
+
+export interface GoalkeeperStat {
+  playerId: string;
+  playerNumber: number;
+  playerName: string;
+  team: 'home' | 'away';
+  saves: number;         // Gol parati totali
+  penaltySaves?: number; // Rigori 7m parati
+  goalsConceded: number; // Gol subiti
+  goalsScored: number;   // Gol fatti (es. porta a porta / porta vuota)
+}
+

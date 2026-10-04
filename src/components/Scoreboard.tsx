@@ -13,7 +13,8 @@ import {
   ShieldAlert, 
   ArrowRight,
   Award,
-  Volume2
+  Volume2,
+  Shield
 } from 'lucide-react';
 
 interface ScoreboardProps {
@@ -27,6 +28,7 @@ interface ScoreboardProps {
   onClosePeriodOrNext: () => void;
   onTriggerTimeout: (team: 'home' | 'away') => void;
   onOpenSanctionModal: (team: 'home' | 'away') => void;
+  onOpenGoalkeepers?: () => void;
 }
 
 export const Scoreboard: React.FC<ScoreboardProps> = ({
@@ -40,9 +42,11 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
   onClosePeriodOrNext,
   onTriggerTimeout,
   onOpenSanctionModal,
+  onOpenGoalkeepers,
 }) => {
   const currentCategory = CATEGORIES[matchState.settings.category] || CATEGORIES.under_14;
   const isU14 = currentCategory.isU14Format;
+  const totalSaves = matchState.goalkeeperStats?.reduce((acc, c) => acc + c.saves, 0) || 0;
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(Math.max(0, seconds) / 60);
@@ -162,8 +166,8 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
               <button
                 id="btn-goal-home"
                 onClick={() => onGoalClick('home')}
-                className="flex-1 min-h-[48px] sm:min-h-[64px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
-                title="Aggiungi Gol Squadra Casa (+1)"
+                className="flex-1 min-h-[50px] sm:min-h-[64px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-sm sm:text-xl rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
+                title="Aggiungi Gol Squadra Casa (+1 GOL)"
               >
                 <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
                 <span className="hidden xs:inline sm:inline">GOL CASA</span>
@@ -174,11 +178,11 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
                 id="btn-subtract-goal-home"
                 onClick={() => onSubtractGoal('home')}
                 disabled={(isU14 ? matchState.homePeriodGoals : matchState.homeTotalGoals) <= 0}
-                className="w-12 sm:w-14 min-h-[48px] sm:min-h-[64px] bg-red-950/80 hover:bg-red-900 border border-red-800/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-red-200 font-black text-base sm:text-lg rounded-2xl flex items-center justify-center gap-0.5 transition select-none shadow-md shadow-red-950/40"
+                className="min-w-[70px] sm:min-w-[82px] min-h-[50px] sm:min-h-[64px] px-2.5 bg-red-950/90 hover:bg-red-900 border-2 border-red-700/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-red-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-1 transition select-none shadow-md shadow-red-950/40"
                 title="Sottrai 1 Gol a Casa (-1 GOL)"
               >
-                <Minus className="w-4 h-4 stroke-[3]" />
-                <span className="text-xs sm:text-sm font-bold">1</span>
+                <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
+                <span>-1 GOL</span>
               </button>
             </div>
 
@@ -302,20 +306,39 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             </button>
           </div>
 
-          {/* Quick Undo Last Goal Button */}
-          {hasRecentGoals && (
-            <button
-              id="btn-undo-last-goal"
-              onClick={onUndoLastGoal}
-              className="mt-2.5 flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-amber-300 text-xs font-semibold rounded-xl border border-slate-700 transition shadow-sm max-w-full truncate"
-              title="Annulla l'ultimo gol segnato (correzione errori)"
-            >
-              <Undo2 className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">
-                Annulla Gol ({lastGoal?.team === 'home' ? matchState.homeTeam.shortName : matchState.awayTeam.shortName})
-              </span>
-            </button>
-          )}
+          {/* Quick Actions: Undo Last Goal & Goalkeeper Stats */}
+          <div className="flex items-center gap-2 mt-2.5 flex-wrap justify-center">
+            {onOpenGoalkeepers && (
+              <button
+                id="btn-scoreboard-goalkeepers"
+                onClick={onOpenGoalkeepers}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/50 active:scale-95 text-emerald-300 text-xs font-bold rounded-xl transition shadow-sm"
+                title="Funzione Portieri: Gol Parati, Gol Subiti, Gol Fatti e Statistica %"
+              >
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Portieri</span>
+                {totalSaves > 0 && (
+                  <span className="font-mono text-[10px] bg-emerald-500/20 text-emerald-300 font-black px-1.5 py-0.2 rounded-full border border-emerald-500/30">
+                    {totalSaves} par.
+                  </span>
+                )}
+              </button>
+            )}
+
+            {hasRecentGoals && (
+              <button
+                id="btn-undo-last-goal"
+                onClick={onUndoLastGoal}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-amber-300 text-xs font-semibold rounded-xl border border-slate-700 transition shadow-sm max-w-full truncate"
+                title="Annulla l'ultimo gol segnato (correzione errori)"
+              >
+                <Undo2 className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  Annulla Gol ({lastGoal?.team === 'home' ? matchState.homeTeam.shortName : matchState.awayTeam.shortName})
+                </span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* AWAY TEAM COLUMN */}
@@ -359,8 +382,8 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
               <button
                 id="btn-goal-away"
                 onClick={() => onGoalClick('away')}
-                className="flex-1 min-h-[48px] sm:min-h-[64px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-base sm:text-2xl rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
-                title="Aggiungi Gol Squadra Ospiti (+1)"
+                className="flex-1 min-h-[50px] sm:min-h-[64px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-sm sm:text-xl rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
+                title="Aggiungi Gol Squadra Ospiti (+1 GOL)"
               >
                 <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
                 <span className="hidden xs:inline sm:inline">GOL OSPITI</span>
@@ -371,11 +394,11 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
                 id="btn-subtract-goal-away"
                 onClick={() => onSubtractGoal('away')}
                 disabled={(isU14 ? matchState.awayPeriodGoals : matchState.awayTotalGoals) <= 0}
-                className="w-12 sm:w-14 min-h-[48px] sm:min-h-[64px] bg-blue-950/80 hover:bg-blue-900 border border-blue-800/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-blue-200 font-black text-base sm:text-lg rounded-2xl flex items-center justify-center gap-0.5 transition select-none shadow-md shadow-blue-950/40"
+                className="min-w-[70px] sm:min-w-[82px] min-h-[50px] sm:min-h-[64px] px-2.5 bg-blue-950/90 hover:bg-blue-900 border-2 border-blue-700/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-blue-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-1 transition select-none shadow-md shadow-blue-950/40"
                 title="Sottrai 1 Gol a Ospiti (-1 GOL)"
               >
-                <Minus className="w-4 h-4 stroke-[3]" />
-                <span className="text-xs sm:text-sm font-bold">1</span>
+                <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
+                <span>-1 GOL</span>
               </button>
             </div>
 

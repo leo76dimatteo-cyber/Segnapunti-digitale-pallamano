@@ -79,6 +79,8 @@ export function createInitialMatchState(category: CategoryId = 'under_14'): Matc
     goals: [],
     sanctions: [],
     activeTimeout: null,
+    goalkeeperStats: [],
+    activeGoalkeepers: { home: null, away: null },
     createdAt: now,
     updatedAt: now,
   };
@@ -127,6 +129,15 @@ export function loadMatchState(): MatchState {
           parsed.goals = parsed.goals.filter(g => !g.playerId || (!g.playerId.startsWith('h') && !g.playerId.startsWith('a')));
           parsed.sanctions = parsed.sanctions.filter(s => !s.playerId.startsWith('h') && !s.playerId.startsWith('a'));
           parsed.activeSuspensions = parsed.activeSuspensions.filter(s => !s.playerId.startsWith('h') && !s.playerId.startsWith('a'));
+          modified = true;
+        }
+
+        if (!parsed.goalkeeperStats) {
+          parsed.goalkeeperStats = [];
+          modified = true;
+        }
+        if (!parsed.activeGoalkeepers) {
+          parsed.activeGoalkeepers = { home: null, away: null };
           modified = true;
         }
 

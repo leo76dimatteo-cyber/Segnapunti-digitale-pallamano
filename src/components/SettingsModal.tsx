@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { MatchState, MatchSettings, CategoryId, Team } from '../types';
 import { CATEGORIES } from '../utils/categories';
-import { Settings, X, Check, Save, Trophy, Shield, Clock, UserCheck } from 'lucide-react';
+import { Settings, X, Check, Save, Trophy, Shield, Clock, UserCheck, Volume2 } from 'lucide-react';
+import { sound } from '../utils/sound';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [settings, setSettings] = useState<MatchSettings>({ ...matchState.settings });
   const [homeTeam, setHomeTeam] = useState<Team>({ ...matchState.homeTeam });
   const [awayTeam, setAwayTeam] = useState<Team>({ ...matchState.awayTeam });
-  const [activeTab, setActiveTab] = useState<'category' | 'match_info' | 'teams'>('category');
+  const [activeTab, setActiveTab] = useState<'category' | 'match_info' | 'teams' | 'sound'>('category');
 
   if (!isOpen) return null;
 
@@ -100,6 +101,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate"><span className="hidden sm:inline">Referto &amp; </span>Ufficiali</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('sound')}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+              activeTab === 'sound' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Volume2 className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">Allarmi<span className="hidden sm:inline"> &amp; Audio</span></span>
           </button>
         </div>
 
@@ -331,6 +342,126 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white"
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: SOUND ALARMS & VOLUME */}
+          {activeTab === 'sound' && (
+            <div className="space-y-4">
+              <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Volume2 className="w-4 h-4" /> Allarmi Acustici di Gara
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Sintetizzatore multi-oscillatore Web Audio API ad alto volume per palasport
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.soundEnabled}
+                      onChange={(e) => setSettings({ ...settings, soundEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200">
+                  ⚡ <strong>Aumento Volume Palazzetto Attivo (+185% Loudness Boost)</strong>: La sirena è tarata con 5 oscillatori acustici saturati (110Hz sub-bass, 220Hz, 440Hz, 445Hz chorus e 880Hz piercing) e compressione dinamica ad alto impatto per superare il rumore del pubblico.
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => sound.playBuzzer()}
+                    className="p-3 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 rounded-xl text-left flex items-center gap-3 transition active:scale-95 shadow-sm"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                      <Volume2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-white block">Sirena Palazzetto (Fine Tempo)</span>
+                      <span className="text-[10px] text-slate-400">Suona sirena 1.8s a massimo volume</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => sound.playWhistle()}
+                    className="p-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-left flex items-center gap-3 transition active:scale-95 shadow-sm"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                      📢
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-white block">Fischio Arbitrale FIGH</span>
+                      <span className="text-[10px] text-slate-400">Doppia frequenza con effetto trill</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => sound.playGoalSound()}
+                    className="p-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-left flex items-center gap-3 transition active:scale-95 shadow-sm"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                      ⚽
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-white block">Fanfara Gol Segnato</span>
+                      <span className="text-[10px] text-slate-400">Accordo a 4 note ascendente</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => sound.playWarningBeep()}
+                    className="p-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-left flex items-center gap-3 transition active:scale-95 shadow-sm"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+                      ⚠️
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-white block">Segnale 2 Minuti / Alert</span>
+                      <span className="text-[10px] text-slate-400">Doppio beep penetrante tavolo</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => sound.playTimeoutAlert()}
+                    className="sm:col-span-2 p-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-left flex items-center gap-3 transition active:scale-95 shadow-sm"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+                      ⏱️
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-white block">Triplo Segnale Fine Time-Out</span>
+                      <span className="text-[10px] text-slate-400">Tre impulsi acustici per richiamo squadre in campo</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Vibration Toggle */}
+              <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-200 block">Vibrazione Tattile / Aptica</span>
+                  <span className="text-[11px] text-slate-400">Vibra allo scadere dei tempi (su smartphone e tablet supportati)</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.vibrateEnabled}
+                    onChange={(e) => setSettings({ ...settings, vibrateEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
               </div>
             </div>
           )}

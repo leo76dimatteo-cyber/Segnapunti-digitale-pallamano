@@ -13,6 +13,7 @@ import {
   Check, 
   Award,
   ShieldAlert,
+  Shield,
   FileCode,
   FileJson
 } from 'lucide-react';
@@ -393,6 +394,50 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
               </table>
             </div>
           </div>
+
+          {/* Goalkeepers Performance Section (Gol Parati, Gol Subiti, Gol Fatti, % Efficienza) */}
+          {matchState.goalkeeperStats && matchState.goalkeeperStats.length > 0 && (
+            <div className="border border-slate-700 print:border-black rounded-2xl p-3 bg-slate-950/60 print:bg-white">
+              <h5 className="text-xs font-bold text-emerald-400 print:text-black mb-2 uppercase flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5 text-emerald-400 print:text-black" /> Rendimento Portieri &amp; Statistiche Efficienza
+              </h5>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 print:border-black text-slate-400 print:text-black text-left">
+                      <th className="py-1 px-2">Squadra</th>
+                      <th className="py-1 px-2">N° Portiere</th>
+                      <th className="py-1 px-2 text-center text-emerald-400 print:text-black font-bold">Gol Parati</th>
+                      <th className="py-1 px-2 text-center text-teal-400 print:text-black font-bold">Rigori 7m</th>
+                      <th className="py-1 px-2 text-center text-rose-400 print:text-black font-bold">Gol Subiti</th>
+                      <th className="py-1 px-2 text-center font-mono">Tiri Tot.</th>
+                      <th className="py-1 px-2 text-center text-amber-300 print:text-black font-bold">% Efficienza</th>
+                      <th className="py-1 px-2 text-center">Gol Fatti</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 print:divide-gray-200">
+                    {matchState.goalkeeperStats.map(s => {
+                      const shots = s.saves + s.goalsConceded;
+                      const pct = shots > 0 ? ((s.saves / shots) * 100).toFixed(1) : '0.0';
+                      const isH = s.team === 'home';
+                      return (
+                        <tr key={`${s.team}_${s.playerId}`} className="text-slate-300 print:text-black">
+                          <td className="py-1 px-2 font-bold">{isH ? matchState.homeTeam.name : matchState.awayTeam.name}</td>
+                          <td className="py-1 px-2 font-mono">#{s.playerNumber} {s.playerName}</td>
+                          <td className="py-1 px-2 text-center font-mono font-bold text-emerald-400 print:text-black">{s.saves}</td>
+                          <td className="py-1 px-2 text-center font-mono text-teal-400 print:text-black">{s.penaltySaves || 0}</td>
+                          <td className="py-1 px-2 text-center font-mono text-rose-400 print:text-black">{s.goalsConceded}</td>
+                          <td className="py-1 px-2 text-center font-mono">{shots}</td>
+                          <td className="py-1 px-2 text-center font-mono font-bold text-amber-300 print:text-black">{pct}%</td>
+                          <td className="py-1 px-2 text-center font-mono">{s.goalsScored}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Sanctions Log */}
           {matchState.sanctions.length > 0 && (

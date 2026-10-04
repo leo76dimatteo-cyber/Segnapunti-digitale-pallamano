@@ -161,6 +161,41 @@ export function exportStandaloneHTML(state: MatchState): void {
       </tbody>
     </table>
 
+    ${state.goalkeeperStats && state.goalkeeperStats.length > 0 ? `
+      <div class="section-title">🛡️ Rendimento Portieri &amp; Statistiche Efficienza FIGH</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Squadra</th>
+            <th>Portiere</th>
+            <th style="text-align:center">Gol Parati</th>
+            <th style="text-align:center">Rigori 7m</th>
+            <th style="text-align:center">Gol Subiti</th>
+            <th style="text-align:center">Tiri Tot.</th>
+            <th style="text-align:center">% Efficienza</th>
+            <th style="text-align:center">Gol Fatti</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.goalkeeperStats.map(s => {
+            const shots = s.saves + s.goalsConceded;
+            const pct = shots > 0 ? ((s.saves / shots) * 100).toFixed(1) : '0.0';
+            const isH = s.team === 'home';
+            return `<tr>
+              <td><strong>${isH ? state.homeTeam.name : state.awayTeam.name}</strong></td>
+              <td>#${s.playerNumber} ${s.playerName}</td>
+              <td style="text-align:center; color:#10b981; font-weight:bold">${s.saves}</td>
+              <td style="text-align:center; color:#06b6d4; font-weight:bold">${s.penaltySaves || 0}</td>
+              <td style="text-align:center; color:#ef4444; font-weight:bold">${s.goalsConceded}</td>
+              <td style="text-align:center">${shots}</td>
+              <td style="text-align:center; color:#f59e0b; font-weight:bold">${pct}%</td>
+              <td style="text-align:center">${s.goalsScored}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    ` : ''}
+
     <div class="section-title">📋 Registro Sanzioni Disciplinari</div>
     <table>
       <thead><tr><th>Minuto</th><th>Squadra</th><th>Giocatore</th><th>Tipo</th></tr></thead>

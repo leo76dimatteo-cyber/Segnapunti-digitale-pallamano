@@ -9,7 +9,8 @@ import {
   GoalEvent, 
   SanctionEvent,
   ActiveSuspension,
-  PeriodResult
+  PeriodResult,
+  GoalkeeperStat
 } from './types';
 import { CATEGORIES, calculatePeriodPoints } from './utils/categories';
 import { 
@@ -34,6 +35,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { RosterManagerModal } from './components/RosterManagerModal';
 import { JsonDataManagerModal } from './components/JsonDataManagerModal';
 import { TimeoutModal } from './components/TimeoutModal';
+import { GoalkeeperModal } from './components/GoalkeeperModal';
 import confetti from 'canvas-confetti';
 import { AlertTriangle } from 'lucide-react';
 
@@ -54,6 +56,7 @@ export default function App() {
     isOpen: boolean;
     team: 'home' | 'away';
   }>({ isOpen: false, team: 'home' });
+  const [isGoalkeeperOpen, setIsGoalkeeperOpen] = useState(false);
 
   // Confirmation alerts
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -264,14 +267,65 @@ export default function App() {
       sound.playGoalSound();
     }
 
-    setMatchState(prev => ({
-      ...prev,
-      homePeriodGoals: newHomeLive,
-      awayPeriodGoals: newAwayLive,
-      homeTotalGoals: newHomeTotal,
-      awayTotalGoals: newAwayTotal,
-      goals: [...prev.goals, goalEvent],
-    }));
+    setMatchState(prev => {
+      // Auto-update goalkeeper conceded if active goalkeeper exists for opponent
+      const opponentTeam = team === 'home' ? 'away' : 'home';
+      const activeGkOpponentId = prev.activeGoalkeepers?.[opponentTeam];
+      let updatedGkStats = [...(prev.goalkeeperStats || [])];
+
+      if (activeGkOpponentId) {
+        const oppTeamObj = opponentTeam === 'home' ? prev.homeTeam : prev.awayTeam;
+        const gkPlayer = oppTeamObj.players.find(p => p.id === activeGkOpponentId);
+        const idx = updatedGkStats.findIndex(s => s.playerId === activeGkOpponentId && s.team === opponentTeam);
+        if (idx >= 0) {
+          updatedGkStats[idx] = {
+            ...updatedGkStats[idx],
+            goalsConceded: updatedGkStats[idx].goalsConceded + 1,
+          };
+        } else {
+          updatedGkStats.push({
+            playerId: activeGkOpponentId,
+            playerNumber: gkPlayer?.number || 0,
+            playerName: gkPlayer?.name || 'Portiere',
+            team: opponentTeam,
+            saves: 0,
+            goalsConceded: 1,
+            goalsScored: 0,
+          });
+        }
+      }
+
+      // If goal was scored by a goalkeeper
+      if (player && player.role === 'Portiere') {
+        const idx = updatedGkStats.findIndex(s => s.playerId === player.id && s.team === team);
+        if (idx >= 0) {
+          updatedGkStats[idx] = {
+            ...updatedGkStats[idx],
+            goalsScored: updatedGkStats[idx].goalsScored + 1,
+          };
+        } else {
+          updatedGkStats.push({
+            playerId: player.id,
+            playerNumber: player.number,
+            playerName: player.name,
+            team,
+            saves: 0,
+            goalsConceded: 0,
+            goalsScored: 1,
+          });
+        }
+      }
+
+      return {
+        ...prev,
+        homePeriodGoals: newHomeLive,
+        awayPeriodGoals: newAwayLive,
+        homeTotalGoals: newHomeTotal,
+        awayTotalGoals: newAwayTotal,
+        goals: [...prev.goals, goalEvent],
+        goalkeeperStats: updatedGkStats,
+      };
+    });
   };
 
   // Undo Last Goal
@@ -292,6 +346,21 @@ export default function App() {
       const newHomeTotal = isHome ? Math.max(0, prev.homeTotalGoals - 1) : prev.homeTotalGoals;
       const newAwayTotal = !isHome ? Math.max(0, prev.awayTotalGoals - 1) : prev.awayTotalGoals;
 
+      // Adjust goalkeeper stats if conceded was auto-tracked
+      const opponentTeam = lastGoal.team === 'home' ? 'away' : 'home';
+      const activeGkOpponentId = prev.activeGoalkeepers?.[opponentTeam];
+      let updatedGkStats = [...(prev.goalkeeperStats || [])];
+
+      if (activeGkOpponentId) {
+        const idx = updatedGkStats.findIndex(s => s.playerId === activeGkOpponentId && s.team === opponentTeam);
+        if (idx >= 0 && updatedGkStats[idx].goalsConceded > 0) {
+          updatedGkStats[idx] = {
+            ...updatedGkStats[idx],
+            goalsConceded: updatedGkStats[idx].goalsConceded - 1,
+          };
+        }
+      }
+
       return {
         ...prev,
         homePeriodGoals: newHomePeriod,
@@ -299,6 +368,7 @@ export default function App() {
         homeTotalGoals: newHomeTotal,
         awayTotalGoals: newAwayTotal,
         goals: newGoals,
+        goalkeeperStats: updatedGkStats,
       };
     });
   };
@@ -334,6 +404,21 @@ export default function App() {
       const newHomeTotal = isHome ? Math.max(0, prev.homeTotalGoals - 1) : prev.homeTotalGoals;
       const newAwayTotal = !isHome ? Math.max(0, prev.awayTotalGoals - 1) : prev.awayTotalGoals;
 
+      // Adjust opponent goalkeeper goals conceded
+      const opponentTeam = team === 'home' ? 'away' : 'home';
+      const activeGkOpponentId = prev.activeGoalkeepers?.[opponentTeam];
+      let updatedGkStats = [...(prev.goalkeeperStats || [])];
+
+      if (activeGkOpponentId) {
+        const idx = updatedGkStats.findIndex(s => s.playerId === activeGkOpponentId && s.team === opponentTeam);
+        if (idx >= 0 && updatedGkStats[idx].goalsConceded > 0) {
+          updatedGkStats[idx] = {
+            ...updatedGkStats[idx],
+            goalsConceded: updatedGkStats[idx].goalsConceded - 1,
+          };
+        }
+      }
+
       return {
         ...prev,
         homePeriodGoals: newHomePeriod,
@@ -341,8 +426,80 @@ export default function App() {
         homeTotalGoals: newHomeTotal,
         awayTotalGoals: newAwayTotal,
         goals: newGoals,
+        goalkeeperStats: updatedGkStats,
       };
     });
+  };
+
+  // Dedicated Goalkeeper Handlers
+  const handleUpdateGoalkeeperStats = (
+    team: 'home' | 'away',
+    playerId: string,
+    delta: { saves?: number; penaltySaves?: number; goalsConceded?: number; goalsScored?: number }
+  ) => {
+    setMatchState(prev => {
+      const currentStats = prev.goalkeeperStats || [];
+      const teamObj = team === 'home' ? prev.homeTeam : prev.awayTeam;
+      const playerObj = teamObj.players.find(p => p.id === playerId);
+
+      const existingIndex = currentStats.findIndex(s => s.playerId === playerId && s.team === team);
+      const updatedStats = [...currentStats];
+
+      if (existingIndex >= 0) {
+        const existing = updatedStats[existingIndex];
+        const newSaves = Math.max(0, existing.saves + (delta.saves || 0));
+        const newPenaltySaves = Math.max(0, (existing.penaltySaves || 0) + (delta.penaltySaves || 0));
+        const newConceded = Math.max(0, existing.goalsConceded + (delta.goalsConceded || 0));
+        const newScored = Math.max(0, existing.goalsScored + (delta.goalsScored || 0));
+
+        updatedStats[existingIndex] = {
+          ...existing,
+          saves: newSaves,
+          penaltySaves: newPenaltySaves,
+          goalsConceded: newConceded,
+          goalsScored: newScored,
+          playerNumber: playerObj?.number ?? existing.playerNumber,
+          playerName: playerObj?.name ?? existing.playerName,
+        };
+      } else {
+        const newStat: GoalkeeperStat = {
+          playerId,
+          playerNumber: playerObj?.number || 0,
+          playerName: playerObj?.name || 'Portiere',
+          team,
+          saves: Math.max(0, delta.saves || 0),
+          penaltySaves: Math.max(0, delta.penaltySaves || 0),
+          goalsConceded: Math.max(0, delta.goalsConceded || 0),
+          goalsScored: Math.max(0, delta.goalsScored || 0),
+        };
+        updatedStats.push(newStat);
+      }
+
+      return {
+        ...prev,
+        goalkeeperStats: updatedStats,
+      };
+    });
+  };
+
+  const handleSetActiveGoalkeeper = (team: 'home' | 'away', playerId: string) => {
+    setMatchState(prev => ({
+      ...prev,
+      activeGoalkeepers: {
+        ...prev.activeGoalkeepers,
+        [team]: playerId,
+      }
+    }));
+  };
+
+  const handleToggleEmptyNet = (team: 'home' | 'away') => {
+    setMatchState(prev => ({
+      ...prev,
+      emptyNet: {
+        ...prev.emptyNet,
+        [team]: !prev.emptyNet?.[team],
+      }
+    }));
   };
 
   // Delete individual goal from log
@@ -765,6 +922,7 @@ export default function App() {
         onOpenReport={() => setIsReportOpen(true)}
         onOpenRosterManager={() => setIsRosterManagerOpen(true)}
         onOpenJsonData={() => setIsJsonDataModalOpen(true)}
+        onOpenGoalkeepers={() => setIsGoalkeeperOpen(true)}
         onResetMatch={() => setResetConfirmOpen(true)}
         onToggleSound={handleToggleSound}
         isWakeLocked={isWakeLocked}
@@ -803,6 +961,7 @@ export default function App() {
           onClosePeriodOrNext={handleClosePeriodOrNext}
           onTriggerTimeout={handleTriggerTimeout}
           onOpenSanctionModal={(team) => handleOpenSanctionModal(team)}
+          onOpenGoalkeepers={() => setIsGoalkeeperOpen(true)}
         />
 
         {/* Under 14 MHC FIGH 3-Period Breakdown Panel */}
@@ -826,6 +985,10 @@ export default function App() {
             onUpdatePlayer={handleUpdatePlayer}
             onClearTeam={handleClearTeamRoster}
             onNewTeam={handleNewTeam}
+            onUpdateGoalkeeperStats={handleUpdateGoalkeeperStats}
+            onSetActiveGoalkeeper={handleSetActiveGoalkeeper}
+            onOpenGoalkeeperModal={() => setIsGoalkeeperOpen(true)}
+            onToggleEmptyNet={handleToggleEmptyNet}
           />
 
           <TeamRosterPanel
@@ -839,6 +1002,10 @@ export default function App() {
             onUpdatePlayer={handleUpdatePlayer}
             onClearTeam={handleClearTeamRoster}
             onNewTeam={handleNewTeam}
+            onUpdateGoalkeeperStats={handleUpdateGoalkeeperStats}
+            onSetActiveGoalkeeper={handleSetActiveGoalkeeper}
+            onOpenGoalkeeperModal={() => setIsGoalkeeperOpen(true)}
+            onToggleEmptyNet={handleToggleEmptyNet}
           />
         </div>
 
@@ -874,6 +1041,16 @@ export default function App() {
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
         matchState={matchState}
+      />
+
+      {/* Goalkeeper Stats & Performance Tracker Modal */}
+      <GoalkeeperModal
+        isOpen={isGoalkeeperOpen}
+        onClose={() => setIsGoalkeeperOpen(false)}
+        matchState={matchState}
+        onUpdateGoalkeeperStats={handleUpdateGoalkeeperStats}
+        onSetActiveGoalkeeper={handleSetActiveGoalkeeper}
+        onGoalClick={handleConfirmGoal}
       />
 
       {/* Settings Modal */}
