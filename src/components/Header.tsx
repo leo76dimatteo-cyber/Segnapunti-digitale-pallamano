@@ -99,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Brand & Category info */}
         <div className="flex items-center gap-2 min-w-0 flex-shrink">
           <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-950 border border-amber-500/40 flex items-center justify-center text-white shadow-md shadow-amber-500/10 overflow-hidden p-0.5">
-            <img src="/icon.svg" alt="FIGH Logo" className="w-full h-full object-contain" />
+            <img src="/icon.svg?v=2" alt="Handball Score Pro Logo" className="w-full h-full object-contain" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
