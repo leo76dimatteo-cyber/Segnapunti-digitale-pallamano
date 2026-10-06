@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
+    "generate-icons": "node scripts/generate-icons.mjs",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
