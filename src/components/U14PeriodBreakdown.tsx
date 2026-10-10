@@ -25,11 +25,11 @@ export const U14PeriodBreakdown: React.FC<U14PeriodBreakdownProps> = ({
             <h3 className="font-extrabold text-sm sm:text-base text-slate-100 flex items-center gap-2">
               Tabella Tempi &amp; Punti Under 14
               <span className="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded-full border border-amber-500/30">
-                Format MHC FIGH 2026/27
+                Format FIGH Circolare 47
               </span>
             </h3>
             <p className="text-[11px] text-slate-400">
-              3 tempi da 15' indipendenti. Reti azzerate a ogni tempo. Vittoria tempo = 1 pt, Pareggio = 0.5 pt.
+              {matchState.settings.totalPeriods || 3} tempi da {matchState.settings.periodDurationMinutes || 20}' indipendenti, {matchState.settings.intervalDurationMinutes || 5}' di recupero. Reti azzerate a ogni tempo (1 pt vittoria, 0.5 pareggio).
             </p>
           </div>
         </div>
@@ -87,7 +87,7 @@ export const U14PeriodBreakdown: React.FC<U14PeriodBreakdownProps> = ({
                     <CircleDashed className="w-4 h-4 text-slate-600" />
                   )}
                   <span className="font-bold text-xs sm:text-sm text-slate-200">
-                    {periodNum}° Tempo (15')
+                    {periodNum}° Tempo ({matchState.settings.periodDurationMinutes || 20}')
                   </span>
                 </div>
 
@@ -147,7 +147,7 @@ export const U14PeriodBreakdown: React.FC<U14PeriodBreakdownProps> = ({
       <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 flex items-start gap-2.5">
         <Info className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
         <p className="text-[11px] text-amber-200/90 leading-relaxed">
-          <strong>Regolamento Under 14 MHC:</strong> Il tabellone reti si azzera a 0-0 all'inizio di ciascuno dei 3 tempi. Anche in caso di ampio scarto di reti nel 1° tempo (che vale comunque max 1 punto), la squadra in svantaggio riparte da 0-0 nel tempo successivo. Il risultato ufficiale della gara è dato unicamente dalla somma dei punti dei 3 tempi.
+          <strong>Regolamento Under 14 (Circolare 47):</strong> Campionato Regionale con 3 tempi da {matchState.settings.periodDurationMinutes || 20} minuti e {matchState.settings.intervalDurationMinutes || 5} minuti di recupero/intervallo. Il tabellone reti si azzera a 0-0 all'inizio di ciascun tempo. Ogni tempo assegna 1 punto alla vittoria e 0.5 al pareggio. Il risultato ufficiale della gara è dato unicamente dalla somma dei punti dei 3 tempi (max 3 pt).
         </p>
       </div>
     </div>

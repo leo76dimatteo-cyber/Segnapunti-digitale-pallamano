@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Upload,
   FileJson,
-  Sparkles
+  Sparkles,
+  UserCheck
 } from 'lucide-react';
 
 interface RosterManagerModalProps {
@@ -21,6 +22,7 @@ interface RosterManagerModalProps {
   matchState: MatchState;
   onLoadRosterIntoTeam: (teamType: 'home' | 'away', roster: SavedRoster) => void;
   onClearTeamRoster?: (teamType: 'home' | 'away') => void;
+  onOpenPlayersRegistry?: () => void;
 }
 
 export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
@@ -29,6 +31,7 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
   matchState,
   onLoadRosterIntoTeam,
   onClearTeamRoster,
+  onOpenPlayersRegistry,
 }) => {
   const [savedRosters, setSavedRosters] = useState<SavedRoster[]>(() => loadSavedRosters());
   const [successMsg, setSuccessMsg] = useState('');
@@ -271,6 +274,20 @@ export const RosterManagerModal: React.FC<RosterManagerModalProps> = ({
               <Upload className="w-3.5 h-3.5 text-indigo-400" />
               <span>Importa JSON</span>
             </button>
+
+            {onOpenPlayersRegistry && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenPlayersRegistry();
+                }}
+                className="py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition flex items-center gap-1.5"
+                title="Apri l'anagrafica giocatori per categoria"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Registro Categorie</span>
+              </button>
+            )}
 
             {savedRosters.length > 0 && (
               confirmClearAll ? (

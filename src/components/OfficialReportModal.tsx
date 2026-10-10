@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MatchState } from '../types';
 import { CATEGORIES } from '../utils/categories';
 import { generateMatchReportPDF } from '../utils/pdfGenerator';
@@ -15,7 +15,8 @@ import {
   ShieldAlert,
   Shield,
   FileCode,
-  FileJson
+  FileJson,
+  ListOrdered
 } from 'lucide-react';
 
 interface OfficialReportModalProps {
@@ -30,6 +31,102 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
   matchState,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [pdfSuccess, setPdfSuccess] = useState(false);
+
+  // Combined goalkeepers list for table display
+  const combinedGkList = useMemo(() => {
+    const list: Array<{
+      team: 'home' | 'away';
+      teamName: string;
+      number: number;
+      name: string;
+      role: string;
+      saves: number;
+      penaltySaves: number;
+      goalsConceded: number;
+      totalShots: number;
+      efficiencyPct: string;
+      goalsScored: number;
+    }> = [];
+
+    const existingStats = matchState.goalkeeperStats || [];
+
+    // Home
+    matchState.homeTeam.players.forEach(p => {
+      if (p.role === 'Portiere' || existingStats.some(s => s.team === 'home' && s.playerId === p.id)) {
+        const stat = existingStats.find(s => s.team === 'home' && s.playerId === p.id);
+        const saves = stat ? stat.saves : 0;
+        const penaltySaves = stat ? (stat.penaltySaves || 0) : 0;
+        const goalsConceded = stat ? stat.goalsConceded : 0;
+        const goalsScored = stat ? stat.goalsScored : 0;
+        const totalShots = saves + goalsConceded;
+        list.push({
+          team: 'home',
+          teamName: matchState.homeTeam.name,
+          number: p.number,
+          name: p.name,
+          role: p.role || 'Portiere',
+          saves,
+          penaltySaves,
+          goalsConceded,
+          totalShots,
+          efficiencyPct: totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) : '0.0',
+          goalsScored
+        });
+      }
+    });
+
+    // Away
+    matchState.awayTeam.players.forEach(p => {
+      if (p.role === 'Portiere' || existingStats.some(s => s.team === 'away' && s.playerId === p.id)) {
+        const stat = existingStats.find(s => s.team === 'away' && s.playerId === p.id);
+        const saves = stat ? stat.saves : 0;
+        const penaltySaves = stat ? (stat.penaltySaves || 0) : 0;
+        const goalsConceded = stat ? stat.goalsConceded : 0;
+        const goalsScored = stat ? stat.goalsScored : 0;
+        const totalShots = saves + goalsConceded;
+        list.push({
+          team: 'away',
+          teamName: matchState.awayTeam.name,
+          number: p.number,
+          name: p.name,
+          role: p.role || 'Portiere',
+          saves,
+          penaltySaves,
+          goalsConceded,
+          totalShots,
+          efficiencyPct: totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) : '0.0',
+          goalsScored
+        });
+      }
+    });
+
+    // Any other tracked goalkeepers
+    existingStats.forEach(s => {
+      if (!list.some(g => g.team === s.team && g.number === s.playerNumber && g.name === s.playerName)) {
+        const saves = s.saves;
+        const penaltySaves = s.penaltySaves || 0;
+        const goalsConceded = s.goalsConceded;
+        const goalsScored = s.goalsScored || 0;
+        const totalShots = saves + goalsConceded;
+        list.push({
+          team: s.team,
+          teamName: s.team === 'home' ? matchState.homeTeam.name : matchState.awayTeam.name,
+          number: s.playerNumber,
+          name: s.playerName,
+          role: 'Portiere',
+          saves,
+          penaltySaves,
+          goalsConceded,
+          totalShots,
+          efficiencyPct: totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) : '0.0',
+          goalsScored
+        });
+      }
+    });
+
+    return list;
+  }, [matchState]);
 
   if (!isOpen) return null;
 
@@ -41,7 +138,13 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
   };
 
   const handleDownloadPDF = () => {
-    generateMatchReportPDF(matchState);
+    try {
+      generateMatchReportPDF(matchState);
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 3000);
+    } catch (err) {
+      console.error('Errore generazione PDF:', err);
+    }
   };
 
   const handleCopySummary = () => {
@@ -120,11 +223,15 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
 
             <button
               onClick={handleDownloadPDF}
-              className="px-3 sm:px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition active:scale-95"
-              title="Scarica referto in formato PDF vettoriale"
+              className={`px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg transition active:scale-95 ${
+                pdfSuccess 
+                  ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/20' 
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+              }`}
+              title="Scarica referto ufficiale di gara in formato PDF vettoriale (jspdf)"
             >
-              <Download className="w-4 h-4" />
-              <span><span className="hidden sm:inline">Scarica </span>PDF</span>
+              {pdfSuccess ? <Check className="w-4 h-4 text-slate-950 stroke-[3]" /> : <Download className="w-4 h-4" />}
+              <span>{pdfSuccess ? 'PDF Scaricato!' : <span><span className="hidden sm:inline">Scarica </span>PDF</span>}</span>
             </button>
 
             <button
@@ -258,7 +365,7 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
                     const pr = matchState.periodResults.find(r => r.period === pNum);
                     return (
                       <tr key={pNum} className="text-slate-300 print:text-black">
-                        <td className="py-2 px-2 font-bold">{pNum}° Tempo (15 min)</td>
+                        <td className="py-2 px-2 font-bold">{pNum}° Tempo ({matchState.settings.periodDurationMinutes} min)</td>
                         <td className="py-2 px-2 text-center font-mono font-bold">{pr ? pr.homeGoals : 0}</td>
                         <td className="py-2 px-2 text-center font-mono font-bold">{pr ? pr.awayGoals : 0}</td>
                         <td className="py-2 px-2 text-center">
@@ -396,48 +503,82 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
           </div>
 
           {/* Goalkeepers Performance Section (Gol Parati, Gol Subiti, Gol Fatti, % Efficienza) */}
-          {matchState.goalkeeperStats && matchState.goalkeeperStats.length > 0 && (
-            <div className="border border-slate-700 print:border-black rounded-2xl p-3 bg-slate-950/60 print:bg-white">
-              <h5 className="text-xs font-bold text-emerald-400 print:text-black mb-2 uppercase flex items-center gap-1">
+          <div className="border border-slate-700 print:border-black rounded-2xl p-3 bg-slate-950/60 print:bg-white">
+            <h5 className="text-xs font-bold text-emerald-400 print:text-black mb-2 uppercase flex items-center justify-between">
+              <span className="flex items-center gap-1">
                 <Shield className="w-3.5 h-3.5 text-emerald-400 print:text-black" /> Rendimento Portieri &amp; Statistiche Efficienza
-              </h5>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[11px] border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 print:border-black text-slate-400 print:text-black text-left">
-                      <th className="py-1 px-2">Squadra</th>
-                      <th className="py-1 px-2">N° Portiere</th>
-                      <th className="py-1 px-2 text-center text-emerald-400 print:text-black font-bold">Gol Parati</th>
-                      <th className="py-1 px-2 text-center text-teal-400 print:text-black font-bold">Rigori 7m</th>
-                      <th className="py-1 px-2 text-center text-rose-400 print:text-black font-bold">Gol Subiti</th>
-                      <th className="py-1 px-2 text-center font-mono">Tiri Tot.</th>
-                      <th className="py-1 px-2 text-center text-amber-300 print:text-black font-bold">% Efficienza</th>
-                      <th className="py-1 px-2 text-center">Gol Fatti</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800 print:divide-gray-200">
-                    {matchState.goalkeeperStats.map(s => {
-                      const shots = s.saves + s.goalsConceded;
-                      const pct = shots > 0 ? ((s.saves / shots) * 100).toFixed(1) : '0.0';
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal">
+                {combinedGkList.length} portier{combinedGkList.length === 1 ? 'e' : 'i'} in distinta
+              </span>
+            </h5>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px] border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 print:border-black text-slate-400 print:text-black text-left">
+                    <th className="py-1 px-2">Squadra</th>
+                    <th className="py-1 px-2">N° Portiere</th>
+                    <th className="py-1 px-2">Ruolo</th>
+                    <th className="py-1 px-2 text-center text-emerald-400 print:text-black font-bold">Gol Parati</th>
+                    <th className="py-1 px-2 text-center text-teal-400 print:text-black font-bold">Rigori 7m</th>
+                    <th className="py-1 px-2 text-center text-rose-400 print:text-black font-bold">Gol Subiti</th>
+                    <th className="py-1 px-2 text-center font-mono">Tiri Tot.</th>
+                    <th className="py-1 px-2 text-center text-amber-300 print:text-black font-bold">% Efficienza</th>
+                    <th className="py-1 px-2 text-center">Gol Fatti</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 print:divide-gray-200">
+                  {combinedGkList.length > 0 ? (
+                    combinedGkList.map(s => {
                       const isH = s.team === 'home';
                       return (
-                        <tr key={`${s.team}_${s.playerId}`} className="text-slate-300 print:text-black">
+                        <tr key={`${s.team}_${s.number}_${s.name}`} className="text-slate-300 print:text-black">
                           <td className="py-1 px-2 font-bold">{isH ? matchState.homeTeam.name : matchState.awayTeam.name}</td>
-                          <td className="py-1 px-2 font-mono">#{s.playerNumber} {s.playerName}</td>
+                          <td className="py-1 px-2 font-mono font-bold">#{s.number} {s.name}</td>
+                          <td className="py-1 px-2 text-[10px] text-slate-400 print:text-gray-600">{s.role}</td>
                           <td className="py-1 px-2 text-center font-mono font-bold text-emerald-400 print:text-black">{s.saves}</td>
                           <td className="py-1 px-2 text-center font-mono text-teal-400 print:text-black">{s.penaltySaves || 0}</td>
                           <td className="py-1 px-2 text-center font-mono text-rose-400 print:text-black">{s.goalsConceded}</td>
-                          <td className="py-1 px-2 text-center font-mono">{shots}</td>
-                          <td className="py-1 px-2 text-center font-mono font-bold text-amber-300 print:text-black">{pct}%</td>
+                          <td className="py-1 px-2 text-center font-mono">{s.totalShots}</td>
+                          <td className="py-1 px-2 text-center font-mono font-bold text-amber-300 print:text-black">{s.efficiencyPct}%</td>
                           <td className="py-1 px-2 text-center font-mono">{s.goalsScored}</td>
                         </tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={9} className="py-2 px-2 text-center text-slate-500 italic">
+                        Nessun portiere registrato specificatamente nelle distinte gara
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                {combinedGkList.length > 0 && (
+                  <tfoot>
+                    {(() => {
+                      const totSaves = combinedGkList.reduce((acc, g) => acc + g.saves, 0);
+                      const totPen = combinedGkList.reduce((acc, g) => acc + g.penaltySaves, 0);
+                      const totConceded = combinedGkList.reduce((acc, g) => acc + g.goalsConceded, 0);
+                      const totShots = combinedGkList.reduce((acc, g) => acc + g.totalShots, 0);
+                      const totScored = combinedGkList.reduce((acc, g) => acc + g.goalsScored, 0);
+                      const avgPct = totShots > 0 ? ((totSaves / totShots) * 100).toFixed(1) : '0.0';
+                      return (
+                        <tr className="border-t border-slate-700 font-bold bg-slate-900/50 print:bg-gray-100 text-slate-200 print:text-black">
+                          <td colSpan={3} className="py-1.5 px-2 uppercase text-[10px] tracking-wider">Totale Portieri Gara</td>
+                          <td className="py-1.5 px-2 text-center font-mono text-emerald-400 print:text-black">{totSaves}</td>
+                          <td className="py-1.5 px-2 text-center font-mono text-teal-400 print:text-black">{totPen}</td>
+                          <td className="py-1.5 px-2 text-center font-mono text-rose-400 print:text-black">{totConceded}</td>
+                          <td className="py-1.5 px-2 text-center font-mono">{totShots}</td>
+                          <td className="py-1.5 px-2 text-center font-mono text-amber-300 print:text-black">{avgPct}%</td>
+                          <td className="py-1.5 px-2 text-center font-mono">{totScored}</td>
+                        </tr>
+                      );
+                    })()}
+                  </tfoot>
+                )}
+              </table>
             </div>
-          )}
+          </div>
 
           {/* Sanctions Log */}
           {matchState.sanctions.length > 0 && (
@@ -470,6 +611,46 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Goal Progression Timeline */}
+          {matchState.goals.length > 0 && (
+            <div className="border border-slate-700 print:border-black rounded-2xl p-3 bg-slate-950/60 print:bg-white">
+              <h5 className="text-xs font-bold text-slate-300 print:text-black mb-2 uppercase flex items-center gap-1">
+                <ListOrdered className="w-3.5 h-3.5 text-blue-400" /> Progressione Cronologica Reti (Sequenza Marcature)
+              </h5>
+              <div className="max-h-48 overflow-y-auto print:max-h-none">
+                <table className="w-full text-[11px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 print:border-black text-slate-400 print:text-black text-left">
+                      <th className="py-1 px-2">Prog.</th>
+                      <th className="py-1 px-2">Tempo / Minuto</th>
+                      <th className="py-1 px-2">Squadra</th>
+                      <th className="py-1 px-2">Marcatore</th>
+                      <th className="py-1 px-2 text-right">Punteggio Progressivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 print:divide-gray-200">
+                    {matchState.goals.map((g, idx) => {
+                      const isH = g.team === 'home';
+                      return (
+                        <tr key={g.id} className="text-slate-300 print:text-black">
+                          <td className="py-1 px-2 font-mono text-[10px] text-slate-500">{idx + 1}</td>
+                          <td className="py-1 px-2 font-mono">{g.period}°T ({g.minute}'{g.second < 10 ? '0' : ''}{g.second}")</td>
+                          <td className={`py-1 px-2 font-bold ${isH ? 'text-red-400 print:text-red-700' : 'text-blue-400 print:text-blue-700'}`}>
+                            {isH ? matchState.homeTeam.shortName || 'Casa' : matchState.awayTeam.shortName || 'Ospiti'}
+                          </td>
+                          <td className="py-1 px-2">#{g.playerNumber || '-'} {g.playerName || 'Rete'}</td>
+                          <td className="py-1 px-2 text-right font-mono font-bold">
+                            {isU14 ? `${g.homePeriodScore} - ${g.awayPeriodScore} (Tot: ${g.homeTotalGoals}-${g.awayTotalGoals})` : `${g.homeTotalGoals} - ${g.awayTotalGoals}`}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

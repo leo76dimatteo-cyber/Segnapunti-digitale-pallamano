@@ -141,6 +141,19 @@ export function loadMatchState(): MatchState {
           modified = true;
         }
 
+        // Upgrade Under 14 to Circolare 47 (20 min per period, 5 min interval) if still on old 15 min default
+        if (parsed.settings.category === 'under_14') {
+          if (parsed.settings.periodDurationMinutes === 15) {
+            parsed.settings.periodDurationMinutes = 20;
+            parsed.settings.intervalDurationMinutes = 5;
+            // If match is in period 1 and timer hasn't run or is at 15m (900s), adjust to 20m (1200s)
+            if (parsed.currentPeriod === 1 && !parsed.isTimerRunning && (parsed.periodSecondsRemaining === 900 || parsed.goals.length === 0)) {
+              parsed.periodSecondsRemaining = 20 * 60;
+            }
+            modified = true;
+          }
+        }
+
         if (modified) {
           saveMatchState(parsed);
         }

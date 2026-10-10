@@ -1,12 +1,12 @@
-export type CategoryId = 'serie_b' | 'under_18' | 'under_16' | 'under_14';
+export type CategoryId = 'serie_b' | 'under_18' | 'under_16' | 'under_14' | 'under_14_naz';
 
 export interface CategoryConfig {
   id: CategoryId;
   name: string;
-  isU14Format: boolean; // FIGH MHC Format (3 periods x 15m, goal reset, points system)
+  isU14Format: boolean; // FIGH Circolare 47 (3 tempi da 20m Regionale / 15m Nazionali, 5 min recupero, azzeramento reti, punti a tempo)
   totalPeriods: number;
-  periodDurationMinutes: number; // Duration of each period
-  intervalDurationMinutes: number; // Break between periods
+  periodDurationMinutes: number; // Duration of each period (e.g. 20 min for U14 Regionale, 5 min recupero)
+  intervalDurationMinutes: number; // Break/recovery between periods (5 min for U14)
   description: string;
 }
 
@@ -17,6 +17,29 @@ export interface Player {
   number: number;
   name: string;
   role?: 'Portiere' | 'Capitano' | 'Giocatore';
+  category?: string;
+  clubName?: string;
+  birthYear?: number;
+  cardId?: string; // Cartellino FIGH
+  position?: string;
+}
+
+export interface RegistryPlayer extends Player {
+  category: string; // e.g. 'under_14' | 'under_16' | 'under_18' | 'serie_b' | 'serie_a' | 'master' | string
+  categoryName?: string;
+  clubName?: string;
+  birthYear?: number;
+  cardId?: string;
+  position?: string;
+  notes?: string;
+  savedAt: number;
+}
+
+export interface CategoryPlayerGroup {
+  categoryId: string;
+  categoryName: string;
+  count: number;
+  players: RegistryPlayer[];
 }
 
 export interface Team {

@@ -41,6 +41,7 @@ interface TeamRosterPanelProps {
   onSetActiveGoalkeeper?: (team: 'home' | 'away', playerId: string) => void;
   onOpenGoalkeeperModal?: () => void;
   onToggleEmptyNet?: (team: 'home' | 'away') => void;
+  onOpenPlayersRegistry?: () => void;
 }
 
 export const TeamRosterPanel: React.FC<TeamRosterPanelProps> = ({
@@ -58,6 +59,7 @@ export const TeamRosterPanel: React.FC<TeamRosterPanelProps> = ({
   onSetActiveGoalkeeper,
   onOpenGoalkeeperModal,
   onToggleEmptyNet,
+  onOpenPlayersRegistry,
 }) => {
   // Add Player form state
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
@@ -338,6 +340,18 @@ export const TeamRosterPanel: React.FC<TeamRosterPanelProps> = ({
               title="Elimina/Svuota tutti i giocatori da questa squadra"
             >
               <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* FAST SELECT FROM CATEGORY REGISTRY */}
+          {onOpenPlayersRegistry && (
+            <button
+              onClick={onOpenPlayersRegistry}
+              className="p-1.5 px-2 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 rounded-xl text-xs font-semibold flex items-center gap-1 transition active:scale-95 shadow-sm"
+              title="Apri il registro anagrafica giocatori per categoria e carica atleti"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-[11px] font-bold hidden sm:inline">Da Registro</span>
             </button>
           )}
 

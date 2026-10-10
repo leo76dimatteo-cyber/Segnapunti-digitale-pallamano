@@ -1,7 +1,8 @@
-import { MatchState, Player, Team } from '../types';
+import { MatchState, Player, Team, RegistryPlayer, CategoryPlayerGroup } from '../types';
 import { SavedRoster } from './storage';
+import { getPlayersGroupedByCategory, getCategoryLabel, REGISTRY_CATEGORIES } from './playerRegistry';
 
-export type JsonExportType = 'ROSTER' | 'TEAMS_ARCHIVE' | 'MATCH' | 'FULL_BACKUP';
+export type JsonExportType = 'ROSTER' | 'TEAMS_ARCHIVE' | 'MATCH' | 'FULL_BACKUP' | 'PLAYERS_REGISTRY';
 
 export interface ExportMetadata {
   format: 'FIGH_HANDBALL_DATA';
@@ -9,6 +10,15 @@ export interface ExportMetadata {
   exportedAt: string;
   type: JsonExportType;
   appName: 'Handball Scorer FIGH';
+}
+
+export interface PlayersRegistryExport extends ExportMetadata {
+  type: 'PLAYERS_REGISTRY';
+  totalPlayers: number;
+  filterCategory?: string;
+  categories: CategoryPlayerGroup[];
+  byCategory: Record<string, RegistryPlayer[]>;
+  players: RegistryPlayer[];
 }
 
 export interface SingleRosterExport extends ExportMetadata {
@@ -194,11 +204,168 @@ export function exportFullBackupJson(matchState: MatchState, teams: SavedRoster[
   downloadJsonFile(payload, filename);
 }
 
+/**
+ * 5. Esporta REGISTRO GIOCATORI suddiviso per Categorie
+ */
+export function exportCategorizedPlayersJson(players: RegistryPlayer[], specificCategory?: string): void {
+  const filteredPlayers = specificCategory
+    ? players.filter(p => p.category === specificCategory)
+    : players;
+
+  const categoriesGroup = getPlayersGroupedByCategory(filteredPlayers);
+  const byCategoryMap: Record<string, RegistryPlayer[]> = {};
+
+  categoriesGroup.forEach(group => {
+    byCategoryMap[group.categoryId] = group.players;
+  });
+
+  const payload: PlayersRegistryExport = {
+    format: 'FIGH_HANDBALL_DATA',
+    version: '1.0',
+    type: 'PLAYERS_REGISTRY',
+    appName: 'Handball Scorer FIGH',
+    exportedAt: new Date().toISOString(),
+    totalPlayers: filteredPlayers.length,
+    filterCategory: specificCategory,
+    categories: categoriesGroup,
+    byCategory: byCategoryMap,
+    players: filteredPlayers,
+  };
+
+  const catSuffix = specificCategory ? `_${sanitizeFilename(specificCategory)}` : '_tutte_categorie';
+  const filename = `registro_giocatori_figh${catSuffix}_${formatDateForFile()}.json`;
+  downloadJsonFile(payload, filename);
+}
+
+/**
+ * 6. Scarica Modello / Template JSON per Anagrafica Giocatori per Categorie
+ */
+export function downloadPlayersRegistryTemplateJson(): void {
+  const templatePayload = {
+    format: 'FIGH_HANDBALL_DATA',
+    version: '1.0',
+    type: 'PLAYERS_REGISTRY',
+    appName: 'Handball Scorer FIGH',
+    exportedAt: new Date().toISOString(),
+    istruzioni: 'Modello JSON per importazione anagrafica atleti suddivisi per categorie. Compila i campi per ciascun atleta.',
+    categorieValide: REGISTRY_CATEGORIES.map(c => ({ id: c.id, nome: c.name, descrizione: c.description })),
+    byCategory: {
+      under_14: [
+        {
+          id: 'u14_modello_1',
+          number: 1,
+          name: 'Nome Portiere U14',
+          category: 'under_14',
+          role: 'Portiere',
+          position: 'Portiere',
+          clubName: 'Società Sportiva Esempio',
+          birthYear: 2012,
+          cardId: 'FIGH-000001',
+          notes: 'Esempio atleta U14',
+        },
+        {
+          id: 'u14_modello_2',
+          number: 7,
+          name: 'Nome Capitano U14',
+          category: 'under_14',
+          role: 'Capitano',
+          position: 'Centrale',
+          clubName: 'Società Sportiva Esempio',
+          birthYear: 2012,
+          cardId: 'FIGH-000002',
+          notes: 'Regista',
+        }
+      ],
+      under_16: [
+        {
+          id: 'u16_modello_1',
+          number: 12,
+          name: 'Nome Portiere U16',
+          category: 'under_16',
+          role: 'Portiere',
+          position: 'Portiere',
+          clubName: 'Società Sportiva Esempio',
+          birthYear: 2010,
+          cardId: 'FIGH-000003',
+          notes: 'Esempio atleta U16',
+        }
+      ],
+      serie_b: [
+        {
+          id: 'sb_modello_1',
+          number: 5,
+          name: 'Nome Atleta Senior',
+          category: 'serie_b',
+          role: 'Giocatore',
+          position: 'Terzino',
+          clubName: 'Società Sportiva Esempio',
+          birthYear: 2000,
+          cardId: 'FIGH-000004',
+          notes: 'Esempio Serie B',
+        }
+      ]
+    },
+    players: [
+      {
+        id: 'u14_modello_1',
+        number: 1,
+        name: 'Nome Portiere U14',
+        category: 'under_14',
+        role: 'Portiere',
+        position: 'Portiere',
+        clubName: 'Società Sportiva Esempio',
+        birthYear: 2012,
+        cardId: 'FIGH-000001',
+        notes: 'Esempio atleta U14',
+      },
+      {
+        id: 'u14_modello_2',
+        number: 7,
+        name: 'Nome Capitano U14',
+        category: 'under_14',
+        role: 'Capitano',
+        position: 'Centrale',
+        clubName: 'Società Sportiva Esempio',
+        birthYear: 2012,
+        cardId: 'FIGH-000002',
+        notes: 'Regista',
+      },
+      {
+        id: 'u16_modello_1',
+        number: 12,
+        name: 'Nome Portiere U16',
+        category: 'under_16',
+        role: 'Portiere',
+        position: 'Portiere',
+        clubName: 'Società Sportiva Esempio',
+        birthYear: 2010,
+        cardId: 'FIGH-000003',
+        notes: 'Esempio atleta U16',
+      },
+      {
+        id: 'sb_modello_1',
+        number: 5,
+        name: 'Nome Atleta Senior',
+        category: 'serie_b',
+        role: 'Giocatore',
+        position: 'Terzino',
+        clubName: 'Società Sportiva Esempio',
+        birthYear: 2000,
+        cardId: 'FIGH-000004',
+        notes: 'Esempio Serie B',
+      }
+    ]
+  };
+
+  downloadJsonFile(templatePayload, 'modello_registro_giocatori_per_categorie.json');
+}
+
 export type ParseImportResult =
   | { type: 'ROSTER'; roster: SavedRoster }
   | { type: 'TEAMS_ARCHIVE'; teams: SavedRoster[] }
   | { type: 'MATCH'; matchState: MatchState }
   | { type: 'FULL_BACKUP'; matchState: MatchState; teams: SavedRoster[] }
+  | { type: 'PLAYERS_REGISTRY'; players: RegistryPlayer[]; categories: CategoryPlayerGroup[] }
   | { type: 'INVALID'; error: string };
 
 /**
@@ -212,6 +379,52 @@ export function parseImportedJson(jsonText: string): ParseImportResult {
     }
 
     // 1. Check tagged formats
+    if (data.type === 'PLAYERS_REGISTRY') {
+      let rawList: any[] = [];
+      if (Array.isArray(data.players)) {
+        rawList = data.players;
+      } else if (data.byCategory && typeof data.byCategory === 'object') {
+        Object.values(data.byCategory).forEach((arr: any) => {
+          if (Array.isArray(arr)) rawList.push(...arr);
+        });
+      } else if (Array.isArray(data.categories)) {
+        data.categories.forEach((catGroup: any) => {
+          if (Array.isArray(catGroup.players)) rawList.push(...catGroup.players);
+        });
+      }
+
+      const validPlayers: RegistryPlayer[] = rawList
+        .filter((p: any) => p && p.name && (typeof p.number === 'number' || !isNaN(Number(p.number))))
+        .map((p: any) => {
+          const num = Number(p.number) || 0;
+          const cat = p.category || 'under_14';
+          return {
+            id: p.id || 'reg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            number: num,
+            name: String(p.name).trim(),
+            category: cat,
+            categoryName: p.categoryName || getCategoryLabel(cat),
+            role: p.role || 'Giocatore',
+            position: p.position || 'Giocatore',
+            clubName: p.clubName || '',
+            birthYear: p.birthYear ? Number(p.birthYear) : undefined,
+            cardId: p.cardId || '',
+            notes: p.notes || '',
+            savedAt: p.savedAt || Date.now(),
+          };
+        });
+
+      if (validPlayers.length === 0) {
+        return { type: 'INVALID', error: 'Nessun giocatore valido trovato nel file del registro.' };
+      }
+
+      return {
+        type: 'PLAYERS_REGISTRY',
+        players: validPlayers,
+        categories: getPlayersGroupedByCategory(validPlayers),
+      };
+    }
+
     if (data.type === 'ROSTER' && data.roster && data.roster.teamName) {
       const r = data.roster;
       return {
@@ -249,16 +462,75 @@ export function parseImportedJson(jsonText: string): ParseImportResult {
       return { type: 'FULL_BACKUP', matchState: data.matchState, teams: data.teams };
     }
 
-    // 2. Fallbacks for untagged or standard exports
+    // 2. Check if it's an object with byCategory (e.g. { under_14: [...], under_16: [...] })
+    if (data.byCategory && typeof data.byCategory === 'object') {
+      const rawList: any[] = [];
+      Object.entries(data.byCategory).forEach(([catId, arr]: [string, any]) => {
+        if (Array.isArray(arr)) {
+          arr.forEach(item => {
+            if (item && item.name) {
+              rawList.push({ ...item, category: item.category || catId });
+            }
+          });
+        }
+      });
+      if (rawList.length > 0) {
+        const validPlayers: RegistryPlayer[] = rawList.map((p: any) => ({
+          id: p.id || 'reg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          number: Number(p.number) || 0,
+          name: String(p.name).trim(),
+          category: p.category || 'under_14',
+          categoryName: getCategoryLabel(p.category || 'under_14'),
+          role: p.role || 'Giocatore',
+          position: p.position || 'Giocatore',
+          clubName: p.clubName || '',
+          birthYear: p.birthYear ? Number(p.birthYear) : undefined,
+          cardId: p.cardId || '',
+          notes: p.notes || '',
+          savedAt: Date.now(),
+        }));
+        return {
+          type: 'PLAYERS_REGISTRY',
+          players: validPlayers,
+          categories: getPlayersGroupedByCategory(validPlayers),
+        };
+      }
+    }
+
+    // 3. Fallbacks for untagged or standard exports
     // Check if it's a MatchState object directly
     if (data.homeTeam && data.awayTeam && data.settings && typeof data.periodSecondsRemaining === 'number') {
       return { type: 'MATCH', matchState: data as MatchState };
     }
 
-    // Check if it's an array of teams
+    // Check if it's an array of players with category
     if (Array.isArray(data)) {
-      const valid = data.every(item => item && (item.teamName || item.name) && Array.isArray(item.players));
-      if (valid && data.length > 0) {
+      const isPlayerList = data.every(item => item && item.name && typeof item.number !== 'undefined');
+      if (isPlayerList && data.length > 0) {
+        const validPlayers: RegistryPlayer[] = data.map((p: any) => ({
+          id: p.id || 'reg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          number: Number(p.number) || 0,
+          name: String(p.name).trim(),
+          category: p.category || 'under_14',
+          categoryName: getCategoryLabel(p.category || 'under_14'),
+          role: p.role || 'Giocatore',
+          position: p.position || 'Giocatore',
+          clubName: p.clubName || '',
+          birthYear: p.birthYear ? Number(p.birthYear) : undefined,
+          cardId: p.cardId || '',
+          notes: p.notes || '',
+          savedAt: Date.now(),
+        }));
+        return {
+          type: 'PLAYERS_REGISTRY',
+          players: validPlayers,
+          categories: getPlayersGroupedByCategory(validPlayers),
+        };
+      }
+
+      // Check if it's an array of teams
+      const isTeamList = data.every(item => item && (item.teamName || item.name) && Array.isArray(item.players));
+      if (isTeamList && data.length > 0) {
         const teams: SavedRoster[] = data.map((t: any) => ({
           id: t.id || 'roster_' + Math.random().toString(36).slice(2, 9),
           teamName: t.teamName || t.name,
@@ -289,7 +561,7 @@ export function parseImportedJson(jsonText: string): ParseImportResult {
 
     return {
       type: 'INVALID',
-      error: 'Formato JSON non riconosciuto. Assicurati che sia una Rosa, un Archivio Squadre o una Partita esportata da questa app.',
+      error: 'Formato JSON non riconosciuto. Assicurati che sia un Registro Giocatori per Categorie, una Rosa, o una Partita esportata da questa app.',
     };
   } catch (err: any) {
     return { type: 'INVALID', error: `Errore nella lettura del file: ${err.message || 'JSON non valido'}` };

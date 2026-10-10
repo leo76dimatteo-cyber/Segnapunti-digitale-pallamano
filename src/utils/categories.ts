@@ -30,23 +30,35 @@ export const CATEGORIES: Record<CategoryId, CategoryConfig> = {
   },
   under_14: {
     id: 'under_14',
-    name: 'Under 14 (Sperimentale FIGH 2026/2027 - MHC)',
+    name: 'Under 14 Regionale (Circolare 47)',
+    isU14Format: true,
+    totalPeriods: 3,
+    periodDurationMinutes: 20,
+    intervalDurationMinutes: 5,
+    description: 'Circolare FIGH n. 47: 3 tempi da 20 min per Campionato Regionale, 5 min di intervallo/recupero. Reti azzerate a 0-0 ad ogni tempo. 1 punto vittoria tempo, 0.5 pareggio. Max 3 pt.'
+  },
+  under_14_naz: {
+    id: 'under_14_naz',
+    name: 'Under 14 Concentramenti / Nazionali',
     isU14Format: true,
     totalPeriods: 3,
     periodDurationMinutes: 15,
     intervalDurationMinutes: 5,
-    description: 'Format MHC: 3 tempi da 15 min indipendenti. Reti azzerate a 0-0 ad ogni tempo. 1 punto a chi vince il tempo, 0.5 in caso di parità. Punti max 3.'
+    description: 'Circolare FIGH n. 47 (Concentramenti / 2^ Fase Nazionale): 3 tempi da 15 min indipendenti, 5 min di intervallo/recupero. Reti azzerate a ogni tempo (1 pt vittoria, 0.5 pareggio).'
   }
 };
 
 /**
  * ====================================================================================
- * REGOLAMENTO SPERIMENTALE FIGH 2026/2027 — FORMAT MHC (UNDER 14)
+ * REGOLAMENTO FIGH — CIRCOLARE N. 47 (UNDER 14 FORMAT MHC)
  * ====================================================================================
- * LOGICA DI ASSEGNAZIONE PUNTI:
- * 1. La partita è strutturata su esattamente 3 tempi da 15 minuti ciascuno.
+ * LOGICA DI GIOCO E ASSEGNAZIONE PUNTI:
+ * 1. Durata tempi di gioco (Circolare 47):
+ *    - CAMPIONATO REGIONALE: esattamente 3 tempi da 20 minuti ciascuno.
+ *    - Recupero/intervallo tra i tempi: 5 minuti.
+ *    - Fasi Nazionali / Concentramenti: 3 tempi da 15 minuti ciascuno, 5 min recupero.
  * 2. Il conteggio reti del tabellone LIVE si AZZERA a 0-0 all'inizio di ciascun tempo.
- *    Ogni tempo è, ai fini dell'esito, una "mini-partita" a sé stante.
+ *    Ogni tempo è, ai fini dell'esito, una frazione indipendente a sé stante.
  * 3. Assegnazione punti a fine tempo:
  *    - Più reti segnate nel tempo -> 1.0 punto alla squadra vincitrice, 0.0 all'avversaria.
  *    - Reti pari nel tempo -> 0.5 punti a ciascuna squadra (pareggio).

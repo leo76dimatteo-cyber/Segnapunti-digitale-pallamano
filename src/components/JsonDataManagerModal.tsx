@@ -6,9 +6,12 @@ import {
   exportTeamsArchiveJson, 
   exportMatchJson, 
   exportFullBackupJson, 
+  exportCategorizedPlayersJson,
+  downloadPlayersRegistryTemplateJson,
   parseImportedJson,
   ParseImportResult
 } from '../utils/jsonExport';
+import { loadRegistryPlayers, importRegistryPlayers } from '../utils/playerRegistry';
 import { 
   FileJson, 
   Download, 
@@ -108,6 +111,23 @@ export const JsonDataManagerModal: React.FC<JsonDataManagerModalProps> = ({
     const teams = loadSavedRosters();
     exportFullBackupJson(matchState, teams);
     showSuccess('Backup globale (Partita + Archivio Squadre) esportato in JSON!');
+  };
+
+  const handleExportPlayersRegistry = () => {
+    const registryPlayers = loadRegistryPlayers();
+    if (registryPlayers.length === 0) {
+      showError('Nessun giocatore registrato da esportare.');
+      return;
+    }
+    exportCategorizedPlayersJson(registryPlayers);
+    showSuccess(`Anagrafica con ${registryPlayers.length} atleti esportata in JSON suddivisa per Categorie!`);
+  };
+
+  const handleImportPlayersToRegistry = (incoming: any[], replace = false) => {
+    const imported = importRegistryPlayers(incoming, replace);
+    showSuccess(`${incoming.length} atleti importati con successo nel Registro Categorie!`);
+    setImportedResult(null);
+    setFileName('');
   };
 
   // Import File Handler
@@ -355,6 +375,40 @@ export const JsonDataManagerModal: React.FC<JsonDataManagerModalProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* SECTION 4: ANAGRAFICA GIOCATORI SUDDIVISA PER CATEGORIE */}
+              <div className="p-4 bg-slate-950 border border-amber-500/40 rounded-2xl">
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-amber-400" />
+                    <h4 className="font-extrabold text-sm text-white">4. Registro Giocatori &amp; Categorie (JSON)</h4>
+                  </div>
+                  <span className="text-[10px] font-mono text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/30 font-bold">
+                    FIGH MHC &amp; Campionati
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mb-3">
+                  Genera ed esporta il database completo dei giocatori categorizzati (Under 14 MHC, Under 16, Under 18, Serie B, Serie A, Master) con ruoli, cartellini, numeri e statistiche strutturato per categorie.
+                </p>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={handleExportPlayersRegistry}
+                    className="py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 transition active:scale-95 flex items-center gap-2"
+                  >
+                    <FileJson className="w-4 h-4" />
+                    <span>Genera File JSON Categorie</span>
+                  </button>
+
+                  <button
+                    onClick={downloadPlayersRegistryTemplateJson}
+                    className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold text-xs rounded-xl transition active:scale-95 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4 text-slate-400" />
+                    <span>Scarica Modello / Template JSON</span>
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             /* IMPORT TAB */
@@ -545,6 +599,47 @@ export const JsonDataManagerModal: React.FC<JsonDataManagerModalProps> = ({
                           className="py-2 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition active:scale-95"
                         >
                           Ripristina Tutto (Partita + Squadre)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. PLAYERS REGISTRY IMPORT PREVIEW */}
+                  {importedResult.type === 'PLAYERS_REGISTRY' && (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                            <Users className="w-4 h-4 text-amber-400" />
+                            Registro Giocatori ({importedResult.players.length} atleti)
+                          </span>
+                          <span className="text-xs font-mono text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/30">
+                            {importedResult.categories.length} Categorie
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {importedResult.categories.map(cat => (
+                            <span key={cat.categoryId} className="text-[11px] px-2 py-0.5 bg-slate-800 text-slate-300 rounded-md border border-slate-700">
+                              <strong>{cat.categoryName}:</strong> {cat.count} atleti
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleImportPlayersToRegistry(importedResult.players, false)}
+                          className="py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition active:scale-95 shadow-md flex items-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Unisci al Registro Attuale</span>
+                        </button>
+                        <button
+                          onClick={() => handleImportPlayersToRegistry(importedResult.players, true)}
+                          className="py-2 px-3 bg-slate-800 hover:bg-red-950/60 text-slate-300 hover:text-red-400 font-semibold text-xs rounded-xl transition"
+                          title="Sostituisce l'intero registro con quello del file"
+                        >
+                          Sostituisci Registro Completo
                         </button>
                       </div>
                     </div>

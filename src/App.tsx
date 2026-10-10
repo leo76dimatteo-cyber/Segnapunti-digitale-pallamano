@@ -34,8 +34,10 @@ import { OfficialReportModal } from './components/OfficialReportModal';
 import { SettingsModal } from './components/SettingsModal';
 import { RosterManagerModal } from './components/RosterManagerModal';
 import { JsonDataManagerModal } from './components/JsonDataManagerModal';
+import { PlayersRegistryModal } from './components/PlayersRegistryModal';
 import { TimeoutModal } from './components/TimeoutModal';
 import { GoalkeeperModal } from './components/GoalkeeperModal';
+import { ManualTimerModal } from './components/ManualTimerModal';
 import confetti from 'canvas-confetti';
 import { AlertTriangle } from 'lucide-react';
 
@@ -46,6 +48,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isRosterManagerOpen, setIsRosterManagerOpen] = useState(false);
+  const [isPlayersRegistryOpen, setIsPlayersRegistryOpen] = useState(false);
   const [isJsonDataModalOpen, setIsJsonDataModalOpen] = useState(false);
   const [disciplinaryModalData, setDisciplinaryModalData] = useState<{
     isOpen: boolean;
@@ -57,6 +60,7 @@ export default function App() {
     team: 'home' | 'away';
   }>({ isOpen: false, team: 'home' });
   const [isGoalkeeperOpen, setIsGoalkeeperOpen] = useState(false);
+  const [isManualTimerOpen, setIsManualTimerOpen] = useState(false);
 
   // Confirmation alerts
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -74,14 +78,39 @@ export default function App() {
     saveMatchState(matchState);
   }, [matchState]);
 
-  // Handle Fullscreen toggle
+  // Handle Fullscreen toggle with Safari / iOS WebKit compatibility
   const handleToggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    try {
+      const doc = document as unknown as {
+        fullscreenElement?: Element;
+        webkitFullscreenElement?: Element;
+        exitFullscreen?: () => Promise<void>;
+        webkitExitFullscreen?: () => void;
+      };
+      const docEl = document.documentElement as unknown as {
+        requestFullscreen?: () => Promise<void>;
+        webkitRequestFullscreen?: () => void;
+      };
+
+      const isCurrentFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement);
+
+      if (!isCurrentFullscreen) {
+        if (typeof docEl.requestFullscreen === 'function') {
+          docEl.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+        } else if (typeof docEl.webkitRequestFullscreen === 'function') {
+          docEl.webkitRequestFullscreen();
+          setIsFullscreen(true);
+        }
+      } else {
+        if (typeof doc.exitFullscreen === 'function') {
+          doc.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+        } else if (typeof doc.webkitExitFullscreen === 'function') {
+          doc.webkitExitFullscreen();
+          setIsFullscreen(false);
+        }
       }
+    } catch {
+      // Gracefully ignore on unsupported mobile Safari versions
     }
   };
 
@@ -214,6 +243,19 @@ export default function App() {
       const current = prev.isInterval ? prev.intervalSecondsRemaining : prev.periodSecondsRemaining;
       const maxSeconds = prev.isInterval ? prev.settings.intervalDurationMinutes * 60 : prev.settings.periodDurationMinutes * 60;
       const updated = Math.max(0, Math.min(maxSeconds, current + deltaSeconds));
+
+      return prev.isInterval
+        ? { ...prev, intervalSecondsRemaining: updated }
+        : { ...prev, periodSecondsRemaining: updated };
+    });
+  };
+
+  const handleSetExactTime = (targetSeconds: number) => {
+    setMatchState(prev => {
+      const maxSeconds = prev.isInterval 
+        ? prev.settings.intervalDurationMinutes * 60 
+        : prev.settings.periodDurationMinutes * 60;
+      const updated = Math.max(0, Math.min(maxSeconds, Math.round(targetSeconds)));
 
       return prev.isInterval
         ? { ...prev, intervalSecondsRemaining: updated }
@@ -805,6 +847,24 @@ export default function App() {
     });
   };
 
+  const handleAddBatchPlayers = (teamType: 'home' | 'away', playersToAdd: Omit<Player, 'id'>[]) => {
+    setMatchState(prev => {
+      const isHome = teamType === 'home';
+      const targetTeam = isHome ? prev.homeTeam : prev.awayTeam;
+      const updatedPlayers = [...targetTeam.players];
+      playersToAdd.forEach((pData, idx) => {
+        updatedPlayers.push({
+          ...pData,
+          id: 'p_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substring(2, 5),
+        });
+      });
+      updatedPlayers.sort((a, b) => a.number - b.number);
+      return isHome
+        ? { ...prev, homeTeam: { ...prev.homeTeam, players: updatedPlayers } }
+        : { ...prev, awayTeam: { ...prev.awayTeam, players: updatedPlayers } };
+    });
+  };
+
   const handleRemovePlayer = (teamType: 'home' | 'away', playerId: string) => {
     setMatchState(prev => {
       const isHome = teamType === 'home';
@@ -921,6 +981,7 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenReport={() => setIsReportOpen(true)}
         onOpenRosterManager={() => setIsRosterManagerOpen(true)}
+        onOpenPlayersRegistry={() => setIsPlayersRegistryOpen(true)}
         onOpenJsonData={() => setIsJsonDataModalOpen(true)}
         onOpenGoalkeepers={() => setIsGoalkeeperOpen(true)}
         onResetMatch={() => setResetConfirmOpen(true)}
@@ -962,6 +1023,8 @@ export default function App() {
           onTriggerTimeout={handleTriggerTimeout}
           onOpenSanctionModal={(team) => handleOpenSanctionModal(team)}
           onOpenGoalkeepers={() => setIsGoalkeeperOpen(true)}
+          onOpenManualTimer={() => setIsManualTimerOpen(true)}
+          onOpenReport={() => setIsReportOpen(true)}
         />
 
         {/* Under 14 MHC FIGH 3-Period Breakdown Panel */}
@@ -989,6 +1052,7 @@ export default function App() {
             onSetActiveGoalkeeper={handleSetActiveGoalkeeper}
             onOpenGoalkeeperModal={() => setIsGoalkeeperOpen(true)}
             onToggleEmptyNet={handleToggleEmptyNet}
+            onOpenPlayersRegistry={() => setIsPlayersRegistryOpen(true)}
           />
 
           <TeamRosterPanel
@@ -1006,6 +1070,7 @@ export default function App() {
             onSetActiveGoalkeeper={handleSetActiveGoalkeeper}
             onOpenGoalkeeperModal={() => setIsGoalkeeperOpen(true)}
             onToggleEmptyNet={handleToggleEmptyNet}
+            onOpenPlayersRegistry={() => setIsPlayersRegistryOpen(true)}
           />
         </div>
 
@@ -1069,6 +1134,20 @@ export default function App() {
         matchState={matchState}
         onLoadRosterIntoTeam={handleLoadRosterIntoTeam}
         onClearTeamRoster={handleClearTeamRoster}
+        onOpenPlayersRegistry={() => setIsPlayersRegistryOpen(true)}
+      />
+
+      {/* Players Categorized Registry Modal (Anagrafica Giocatori per Categorie FIGH) */}
+      <PlayersRegistryModal
+        isOpen={isPlayersRegistryOpen}
+        onClose={() => setIsPlayersRegistryOpen(false)}
+        homeTeamName={matchState.homeTeam.name}
+        awayTeamName={matchState.awayTeam.name}
+        homePlayers={matchState.homeTeam.players}
+        awayPlayers={matchState.awayTeam.players}
+        defaultCategory={matchState.settings.category}
+        onAddPlayerToTeam={handleAddPlayer}
+        onAddBatchPlayersToTeam={handleAddBatchPlayers}
       />
 
       {/* JSON Data & Backup Manager Modal */}
@@ -1091,6 +1170,16 @@ export default function App() {
           ...prev,
           activeTimeout: { ...prev.activeTimeout, isRunning: !prev.activeTimeout.isRunning }
         }) : prev)}
+      />
+
+      {/* Manual Timer Modal (Modifica Manuale Cronometro con ±1s, cifre esatte e preset) */}
+      <ManualTimerModal
+        isOpen={isManualTimerOpen}
+        onClose={() => setIsManualTimerOpen(false)}
+        matchState={matchState}
+        onAdjustTime={handleAdjustTime}
+        onSetExactTime={handleSetExactTime}
+        onToggleTimer={handleToggleTimer}
       />
 
       {/* Reset Confirmation Dialog */}

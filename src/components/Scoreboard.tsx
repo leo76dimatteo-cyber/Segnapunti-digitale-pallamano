@@ -14,7 +14,9 @@ import {
   ArrowRight,
   Award,
   Volume2,
-  Shield
+  Shield,
+  SlidersHorizontal,
+  FileText
 } from 'lucide-react';
 
 interface ScoreboardProps {
@@ -29,6 +31,8 @@ interface ScoreboardProps {
   onTriggerTimeout: (team: 'home' | 'away') => void;
   onOpenSanctionModal: (team: 'home' | 'away') => void;
   onOpenGoalkeepers?: () => void;
+  onOpenManualTimer?: () => void;
+  onOpenReport?: () => void;
 }
 
 export const Scoreboard: React.FC<ScoreboardProps> = ({
@@ -43,6 +47,8 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
   onTriggerTimeout,
   onOpenSanctionModal,
   onOpenGoalkeepers,
+  onOpenManualTimer,
+  onOpenReport,
 }) => {
   const currentCategory = CATEGORIES[matchState.settings.category] || CATEGORIES.under_14;
   const isU14 = currentCategory.isU14Format;
@@ -77,7 +83,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             {matchState.isMatchOver ? (
               <span className="text-amber-400 font-extrabold">🏆 GARA CONCLUSA</span>
             ) : matchState.isInterval ? (
-              <span className="text-blue-400 font-semibold">☕ INTERVALLO ({formatTimer(matchState.intervalSecondsRemaining)})</span>
+              <span className="text-blue-400 font-semibold">☕ INTERVALLO / RECUPERO ({formatTimer(matchState.intervalSecondsRemaining)})</span>
             ) : (
               <span>
                 {matchState.currentPeriod}° TEMPO <span className="text-slate-500 text-xs">di {matchState.settings.totalPeriods}</span>
@@ -97,6 +103,17 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
 
         {/* Period advance / status button */}
         <div className="flex items-center gap-2">
+          {matchState.isMatchOver && onOpenReport && (
+            <button
+              onClick={onOpenReport}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition active:scale-95 flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+              title="Apri referto ufficiale di gara & Genera PDF"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Referto PDF</span>
+            </button>
+          )}
+
           <button
             onClick={onClosePeriodOrNext}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 flex items-center gap-1 ${
@@ -209,25 +226,33 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
 
         {/* CENTER COLUMN: TIMER, CONTROLS, UNDO (Full width on mobile top, center column on desktop) */}
         <div className="col-span-12 sm:col-span-4 order-1 sm:order-2 flex flex-col items-center justify-center text-center p-2.5 sm:p-0 bg-slate-950/40 sm:bg-transparent rounded-2xl border border-slate-800/60 sm:border-0 mb-1 sm:mb-0">
-          {/* Main Digital Match Clock */}
+          {/* Main Digital Match Clock (Clickable for manual editing) */}
           <div className="flex flex-col items-center">
-            <div 
-              id="match-clock-display"
-              className={`text-4xl sm:text-5xl md:text-6xl font-black font-mono tracking-wider select-none ${
-                matchState.periodSecondsRemaining <= 60 && matchState.periodSecondsRemaining > 0
-                  ? 'text-amber-400 animate-pulse'
-                  : matchState.periodSecondsRemaining === 0
-                  ? 'text-red-500'
-                  : 'text-slate-100'
-              }`}
+            <button
+              type="button"
+              onClick={onOpenManualTimer}
+              className="group flex flex-col items-center cursor-pointer transition active:scale-95 select-none rounded-2xl px-2.5 py-0.5 hover:bg-slate-900/60 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+              title="Clicca per aprire la modifica manuale cronometro (±1s, cifre esatte, preset)"
             >
-              {matchState.isInterval 
-                ? formatTimer(matchState.intervalSecondsRemaining) 
-                : formatTimer(matchState.periodSecondsRemaining)}
-            </div>
-            <span className="text-[10px] text-slate-400 uppercase font-semibold mt-0.5 tracking-wider">
-              {matchState.isInterval ? 'PAUSA INTERVALLO' : 'CRONOMETRO GARA'}
-            </span>
+              <div 
+                id="match-clock-display"
+                className={`text-4xl sm:text-5xl md:text-6xl font-black font-mono tracking-wider select-none ${
+                  matchState.periodSecondsRemaining <= 60 && matchState.periodSecondsRemaining > 0
+                    ? 'text-amber-400 animate-pulse'
+                    : matchState.periodSecondsRemaining === 0
+                    ? 'text-red-500'
+                    : 'text-slate-100 group-hover:text-amber-300 transition-colors'
+                }`}
+              >
+                {matchState.isInterval 
+                  ? formatTimer(matchState.intervalSecondsRemaining) 
+                  : formatTimer(matchState.periodSecondsRemaining)}
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase font-semibold mt-0.5 tracking-wider group-hover:text-amber-400 transition-colors">
+                <span>{matchState.isInterval ? 'PAUSA INTERVALLO' : 'CRONOMETRO GARA'}</span>
+                <span className="text-[9px] text-amber-400/90 font-mono font-bold bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">±1s</span>
+              </div>
+            </button>
           </div>
 
           {/* Timer Action Buttons */}
@@ -274,36 +299,71 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             </button>
           </div>
 
-          {/* Time adjustment (+1m / -1m / +10s / -10s) */}
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap justify-center">
+          {/* Time adjustment: Decrements (-1m, -10s, -1s) and Increments (+1s, +10s, +1m) + Regola modal */}
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-2 flex-wrap justify-center select-none">
             <button
+              id="btn-timer-sub-1m"
               onClick={() => onAdjustTime(-60)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
-              title="Sottrai 1 minuto"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
+              title="Sottrai 1 minuto (-60s)"
             >
               -1m
             </button>
             <button
+              id="btn-timer-sub-10s"
               onClick={() => onAdjustTime(-10)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
-              title="Sottrai 10 secondi"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
+              title="Sottrai 10 secondi (-10s)"
             >
               -10s
             </button>
             <button
+              id="btn-timer-sub-1s"
+              onClick={() => onAdjustTime(-1)}
+              className="px-2 py-1.5 bg-red-950/70 hover:bg-red-900 active:scale-95 text-red-200 hover:text-white rounded-lg text-[11px] font-mono font-black border border-red-700/80 transition min-w-[36px] text-center shadow-sm"
+              title="Sottrai 1 secondo (-1s)"
+            >
+              -1s
+            </button>
+
+            <span className="text-slate-600 text-xs font-mono">•</span>
+
+            <button
+              id="btn-timer-add-1s"
+              onClick={() => onAdjustTime(1)}
+              className="px-2 py-1.5 bg-emerald-950/70 hover:bg-emerald-900 active:scale-95 text-emerald-200 hover:text-white rounded-lg text-[11px] font-mono font-black border border-emerald-600/80 transition min-w-[36px] text-center shadow-sm"
+              title="Aggiungi 1 secondo (+1s)"
+            >
+              +1s
+            </button>
+            <button
+              id="btn-timer-add-10s"
               onClick={() => onAdjustTime(10)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
-              title="Aggiungi 10 secondi"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
+              title="Aggiungi 10 secondi (+10s)"
             >
               +10s
             </button>
             <button
+              id="btn-timer-add-1m"
               onClick={() => onAdjustTime(60)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[38px] text-center"
-              title="Aggiungi 1 minuto"
+              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
+              title="Aggiungi 1 minuto (+60s)"
             >
               +1m
             </button>
+
+            {onOpenManualTimer && (
+              <button
+                id="btn-open-manual-timer"
+                onClick={onOpenManualTimer}
+                className="px-2 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-300 rounded-lg text-[11px] font-bold border border-amber-500/40 transition flex items-center gap-1 shadow-sm"
+                title="Apri pannello completo modifica manuale cronometro (±1s, MM:SS, preset)"
+              >
+                <SlidersHorizontal className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                <span>Regola</span>
+              </button>
+            )}
           </div>
 
           {/* Quick Actions: Undo Last Goal & Goalkeeper Stats */}

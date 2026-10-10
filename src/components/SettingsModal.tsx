@@ -181,7 +181,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       min="5"
                       max="60"
                       value={settings.periodDurationMinutes}
-                      onChange={(e) => setSettings({ ...settings, periodDurationMinutes: parseInt(e.target.value, 10) || 15 })}
+                      onChange={(e) => setSettings({ ...settings, periodDurationMinutes: parseInt(e.target.value, 10) || 20 })}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono font-bold text-white text-center"
                     />
                   </div>

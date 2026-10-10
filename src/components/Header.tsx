@@ -20,7 +20,8 @@ import {
   X,
   ChevronRight,
   Sparkles,
-  Smartphone
+  Smartphone,
+  UserCheck
 } from 'lucide-react';
 import { exportStandaloneHTML } from '../utils/exportHtml';
 
@@ -29,6 +30,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onOpenReport: () => void;
   onOpenRosterManager: () => void;
+  onOpenPlayersRegistry: () => void;
   onOpenJsonData: () => void;
   onOpenGoalkeepers: () => void;
   onResetMatch: () => void;
@@ -44,6 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenReport,
   onOpenRosterManager,
+  onOpenPlayersRegistry,
   onOpenJsonData,
   onOpenGoalkeepers,
   onResetMatch,
@@ -111,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
                   : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
               }`}>
-                {currentCategory.id === 'under_14' ? 'U14' : currentCategory.name}
+                {currentCategory.id.startsWith('under_14') ? 'U14' : currentCategory.name}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 truncate hidden sm:block">
@@ -257,6 +260,30 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="text-[10px] font-black uppercase text-sky-400 tracking-wider px-1">
                     Archivi &amp; Dati
                   </span>
+
+                  {/* Registro Anagrafica Giocatori per Categorie */}
+                  <button
+                    onClick={() => handleAction(onOpenPlayersRegistry)}
+                    className="w-full p-2 rounded-xl bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 flex items-center justify-between text-left transition group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-slate-200 block group-hover:text-amber-300">
+                            Registro Giocatori &amp; Categorie
+                          </span>
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 font-mono font-bold px-1.5 py-0.2 rounded-full border border-amber-500/30">
+                            JSON
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block">Anagrafica suddivisa per categorie FIGH</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition" />
+                  </button>
 
                   {/* Roster Manager */}
                   <button

@@ -378,6 +378,15 @@ export interface MatchState {
 - Stampa diretta con foglio di stile `@media print` ottimizzato ad alto contrasto.
 - Download immediato del file `.pdf` vettoriale generato lato client.
 
+#### 4.7. Registro Anagrafica Giocatori & Archiviazione JSON per Categorie (`src/components/PlayersRegistryModal.tsx` & `src/utils/playerRegistry.ts`)
+- **Database Giocatori Strutturato per Categorie**: Organizzazione dell'anagrafica atleti per categorie federali (Under 14 MHC FIGH, Under 16 Allievi, Under 18 Juniores, Under 20, Serie B Senior, Serie A, Master Over 35 e Altro).
+- **Scheda Atleta Completa**: Numero di maglia (1-99), nome e cognome, società di appartenenza, ruolo (Portiere, Capitano, Giocatore), posizione tattica (Centrale, Terzino, Ala, Pivot), anno di nascita, matricola/cartellino federale FIGH e note tecniche (es. mancino, rigorista).
+- **Generazione & Esportazione JSON per Categorie**: Download istantaneo di un file `.json` strutturato contenente l'elenco completo degli atleti raggruppati per categoria (`byCategory` e array `categories` con contatori), oppure esportazione mirata di una singola categoria.
+- **Importazione Intelligente JSON**: Riconoscimento automatico del formato `PLAYERS_REGISTRY` con possibilità di unire i nuovi atleti al database esistente o sostituirlo completamente.
+- **Modello / Template JSON Scaricabile**: Possibilità di scaricare un file JSON di esempio precompilato per facilitare il caricamento da fogli di calcolo o database esterni.
+- **Integrazione Diretta con la Partita**: Pulsanti rapidi `+ Casa` e `+ Ospiti` (o selezione multipla massiva) per popolare le distinte della partita in corso con un solo clic senza digitazione manuale, con controllo automatico dei numeri doppi.
+- **Salvataggio da Partita in Corso**: Funzione per registrare istantaneamente tutti i giocatori in distinta gara nel database categorie.
+
 ---
 
 ### 5. Motore Audio DSP & Sintetizzatore Acustico (`src/utils/sound.ts`)
