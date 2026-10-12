@@ -1,5 +1,6 @@
 import { MatchState } from '../types';
 import { CATEGORIES } from './categories';
+import { computeGoalkeeperStats, computeSevenMeterStats } from './matchSelectors';
 
 /**
  * Generates an ultra-lightweight, 100% self-contained standalone HTML report & interactive scoreboard
@@ -161,7 +162,51 @@ export function exportStandaloneHTML(state: MatchState): void {
       </tbody>
     </table>
 
-    ${state.goalkeeperStats && state.goalkeeperStats.length > 0 ? `
+    ${(() => {
+      const sm = computeSevenMeterStats(state);
+      return `
+      <div class="section-title">🎯 Statistiche Tiri dai 7 Metri (Rigori FIGH)</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Squadra</th>
+            <th style="text-align:center">Tirati</th>
+            <th style="text-align:center">Segnati</th>
+            <th style="text-align:center">Parati</th>
+            <th style="text-align:center">Fuori</th>
+            <th style="text-align:center">Palo</th>
+            <th style="text-align:center">% Realizz.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>${state.homeTeam.name} (Casa)</strong></td>
+            <td style="text-align:center">${sm.home.attempted}</td>
+            <td style="text-align:center; color:#10b981; font-weight:bold">${sm.home.scored}</td>
+            <td style="text-align:center; color:#06b6d4">${sm.home.saved}</td>
+            <td style="text-align:center; color:#f59e0b">${sm.home.missed}</td>
+            <td style="text-align:center; color:#c084fc">${sm.home.post}</td>
+            <td style="text-align:center; font-weight:bold; color:#f59e0b">${sm.home.efficiencyPct}%</td>
+          </tr>
+          <tr>
+            <td><strong>${state.awayTeam.name} (Ospiti)</strong></td>
+            <td style="text-align:center">${sm.away.attempted}</td>
+            <td style="text-align:center; color:#10b981; font-weight:bold">${sm.away.scored}</td>
+            <td style="text-align:center; color:#06b6d4">${sm.away.saved}</td>
+            <td style="text-align:center; color:#f59e0b">${sm.away.missed}</td>
+            <td style="text-align:center; color:#c084fc">${sm.away.post}</td>
+            <td style="text-align:center; font-weight:bold; color:#f59e0b">${sm.away.efficiencyPct}%</td>
+          </tr>
+        </tbody>
+      </table>
+      `;
+    })()}
+
+    ${(() => {
+      const gkData = computeGoalkeeperStats(state);
+      const allGk = gkData.allStats;
+      if (allGk.length === 0 && gkData.home.emptyNetGoalsConceded === 0 && gkData.away.emptyNetGoalsConceded === 0) return '';
+      return `
       <div class="section-title">🛡️ Rendimento Portieri &amp; Statistiche Efficienza FIGH</div>
       <table>
         <thead>
@@ -177,9 +222,7 @@ export function exportStandaloneHTML(state: MatchState): void {
           </tr>
         </thead>
         <tbody>
-          ${state.goalkeeperStats.map(s => {
-            const shots = s.saves + s.goalsConceded;
-            const pct = shots > 0 ? ((s.saves / shots) * 100).toFixed(1) : '0.0';
+          ${allGk.map(s => {
             const isH = s.team === 'home';
             return `<tr>
               <td><strong>${isH ? state.homeTeam.name : state.awayTeam.name}</strong></td>
@@ -187,14 +230,39 @@ export function exportStandaloneHTML(state: MatchState): void {
               <td style="text-align:center; color:#10b981; font-weight:bold">${s.saves}</td>
               <td style="text-align:center; color:#06b6d4; font-weight:bold">${s.penaltySaves || 0}</td>
               <td style="text-align:center; color:#ef4444; font-weight:bold">${s.goalsConceded}</td>
-              <td style="text-align:center">${shots}</td>
-              <td style="text-align:center; color:#f59e0b; font-weight:bold">${pct}%</td>
+              <td style="text-align:center">${s.totalShots}</td>
+              <td style="text-align:center; color:#f59e0b; font-weight:bold">${s.efficiencyPct}%</td>
               <td style="text-align:center">${s.goalsScored}</td>
             </tr>`;
           }).join('')}
+          ${gkData.home.emptyNetGoalsConceded > 0 ? `
+            <tr style="background: rgba(245, 158, 11, 0.1);">
+              <td><strong>${state.homeTeam.name}</strong></td>
+              <td>🚨 Porta Vuota (7v6)</td>
+              <td style="text-align:center">-</td>
+              <td style="text-align:center">-</td>
+              <td style="text-align:center; color:#ef4444; font-weight:bold">${gkData.home.emptyNetGoalsConceded}</td>
+              <td style="text-align:center">${gkData.home.emptyNetGoalsConceded}</td>
+              <td style="text-align:center">0.0%</td>
+              <td style="text-align:center">-</td>
+            </tr>
+          ` : ''}
+          ${gkData.away.emptyNetGoalsConceded > 0 ? `
+            <tr style="background: rgba(245, 158, 11, 0.1);">
+              <td><strong>${state.awayTeam.name}</strong></td>
+              <td>🚨 Porta Vuota (7v6)</td>
+              <td style="text-align:center">-</td>
+              <td style="text-align:center">-</td>
+              <td style="text-align:center; color:#ef4444; font-weight:bold">${gkData.away.emptyNetGoalsConceded}</td>
+              <td style="text-align:center">${gkData.away.emptyNetGoalsConceded}</td>
+              <td style="text-align:center">0.0%</td>
+              <td style="text-align:center">-</td>
+            </tr>
+          ` : ''}
         </tbody>
       </table>
-    ` : ''}
+      `;
+    })()}
 
     <div class="section-title">📋 Registro Sanzioni Disciplinari</div>
     <table>

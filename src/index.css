@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+@theme {
+  --breakpoint-xs: 400px;
+}
+
+/* Supporto per safe-area su dispositivi iOS e Android notch */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}

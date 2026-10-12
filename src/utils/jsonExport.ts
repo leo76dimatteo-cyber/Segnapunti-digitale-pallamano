@@ -1,6 +1,7 @@
 import { MatchState, Player, Team, RegistryPlayer, CategoryPlayerGroup } from '../types';
 import { SavedRoster } from './storage';
 import { getPlayersGroupedByCategory, getCategoryLabel, REGISTRY_CATEGORIES } from './playerRegistry';
+import { reconcileMatchState } from './matchSelectors';
 
 export type JsonExportType = 'ROSTER' | 'TEAMS_ARCHIVE' | 'MATCH' | 'FULL_BACKUP' | 'PLAYERS_REGISTRY';
 
@@ -455,11 +456,11 @@ export function parseImportedJson(jsonText: string): ParseImportResult {
     }
 
     if (data.type === 'MATCH' && data.matchState && data.matchState.homeTeam && data.matchState.settings) {
-      return { type: 'MATCH', matchState: data.matchState };
+      return { type: 'MATCH', matchState: reconcileMatchState(data.matchState) };
     }
 
     if (data.type === 'FULL_BACKUP' && data.matchState && Array.isArray(data.teams)) {
-      return { type: 'FULL_BACKUP', matchState: data.matchState, teams: data.teams };
+      return { type: 'FULL_BACKUP', matchState: reconcileMatchState(data.matchState), teams: data.teams };
     }
 
     // 2. Check if it's an object with byCategory (e.g. { under_14: [...], under_16: [...] })
@@ -500,7 +501,7 @@ export function parseImportedJson(jsonText: string): ParseImportResult {
     // 3. Fallbacks for untagged or standard exports
     // Check if it's a MatchState object directly
     if (data.homeTeam && data.awayTeam && data.settings && typeof data.periodSecondsRemaining === 'number') {
-      return { type: 'MATCH', matchState: data as MatchState };
+      return { type: 'MATCH', matchState: reconcileMatchState(data as MatchState) };
     }
 
     // Check if it's an array of players with category

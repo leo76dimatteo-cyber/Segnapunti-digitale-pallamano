@@ -3,6 +3,7 @@ import { MatchState } from '../types';
 import { CATEGORIES } from '../utils/categories';
 import { generateMatchReportPDF } from '../utils/pdfGenerator';
 import { exportStandaloneHTML } from '../utils/exportHtml';
+import { computeGoalkeeperStats, computeSevenMeterStats } from '../utils/matchSelectors';
 import { exportMatchJson } from '../utils/jsonExport';
 import { 
   FileText, 
@@ -16,7 +17,8 @@ import {
   Shield,
   FileCode,
   FileJson,
-  ListOrdered
+  ListOrdered,
+  Target
 } from 'lucide-react';
 
 interface OfficialReportModalProps {
@@ -33,100 +35,10 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [pdfSuccess, setPdfSuccess] = useState(false);
 
-  // Combined goalkeepers list for table display
-  const combinedGkList = useMemo(() => {
-    const list: Array<{
-      team: 'home' | 'away';
-      teamName: string;
-      number: number;
-      name: string;
-      role: string;
-      saves: number;
-      penaltySaves: number;
-      goalsConceded: number;
-      totalShots: number;
-      efficiencyPct: string;
-      goalsScored: number;
-    }> = [];
-
-    const existingStats = matchState.goalkeeperStats || [];
-
-    // Home
-    matchState.homeTeam.players.forEach(p => {
-      if (p.role === 'Portiere' || existingStats.some(s => s.team === 'home' && s.playerId === p.id)) {
-        const stat = existingStats.find(s => s.team === 'home' && s.playerId === p.id);
-        const saves = stat ? stat.saves : 0;
-        const penaltySaves = stat ? (stat.penaltySaves || 0) : 0;
-        const goalsConceded = stat ? stat.goalsConceded : 0;
-        const goalsScored = stat ? stat.goalsScored : 0;
-        const totalShots = saves + goalsConceded;
-        list.push({
-          team: 'home',
-          teamName: matchState.homeTeam.name,
-          number: p.number,
-          name: p.name,
-          role: p.role || 'Portiere',
-          saves,
-          penaltySaves,
-          goalsConceded,
-          totalShots,
-          efficiencyPct: totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) : '0.0',
-          goalsScored
-        });
-      }
-    });
-
-    // Away
-    matchState.awayTeam.players.forEach(p => {
-      if (p.role === 'Portiere' || existingStats.some(s => s.team === 'away' && s.playerId === p.id)) {
-        const stat = existingStats.find(s => s.team === 'away' && s.playerId === p.id);
-        const saves = stat ? stat.saves : 0;
-        const penaltySaves = stat ? (stat.penaltySaves || 0) : 0;
-        const goalsConceded = stat ? stat.goalsConceded : 0;
-        const goalsScored = stat ? stat.goalsScored : 0;
-        const totalShots = saves + goalsConceded;
-        list.push({
-          team: 'away',
-          teamName: matchState.awayTeam.name,
-          number: p.number,
-          name: p.name,
-          role: p.role || 'Portiere',
-          saves,
-          penaltySaves,
-          goalsConceded,
-          totalShots,
-          efficiencyPct: totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) : '0.0',
-          goalsScored
-        });
-      }
-    });
-
-    // Any other tracked goalkeepers
-    existingStats.forEach(s => {
-      if (!list.some(g => g.team === s.team && g.number === s.playerNumber && g.name === s.playerName)) {
-        const saves = s.saves;
-        const penaltySaves = s.penaltySaves || 0;
-        const goalsConceded = s.goalsConceded;
-        const goalsScored = s.goalsScored || 0;
-        const totalShots = saves + goalsConceded;
-        list.push({
-          team: s.team,
-          teamName: s.team === 'home' ? matchState.homeTeam.name : matchState.awayTeam.name,
-          number: s.playerNumber,
-          name: s.playerName,
-          role: 'Portiere',
-          saves,
-          penaltySaves,
-          goalsConceded,
-          totalShots,
-          efficiencyPct: totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) : '0.0',
-          goalsScored
-        });
-      }
-    });
-
-    return list;
-  }, [matchState]);
+  // Goalkeeper and Seven-meter stats computed purely from match state
+  const gkStatsResult = useMemo(() => computeGoalkeeperStats(matchState), [matchState]);
+  const sevenMeterResult = useMemo(() => computeSevenMeterStats(matchState), [matchState]);
+  const combinedGkList = gkStatsResult.allStats;
 
   if (!isOpen) return null;
 
@@ -176,6 +88,10 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
       text += `⭐ RISULTATO FINALE: ${matchState.homeTotalGoals} - ${matchState.awayTotalGoals} (${winnerText})\n`;
     }
 
+    if (sevenMeterResult.home.attempted > 0 || sevenMeterResult.away.attempted > 0) {
+      text += `🎯 Rigori 7m: Casa ${sevenMeterResult.home.scored}/${sevenMeterResult.home.attempted} (${sevenMeterResult.home.efficiencyPct}%) - Ospiti ${sevenMeterResult.away.scored}/${sevenMeterResult.away.attempted} (${sevenMeterResult.away.efficiencyPct}%)\n`;
+    }
+
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -183,8 +99,8 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto animate-in fade-in print:p-0 print:bg-white">
-      <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-3xl p-4 sm:p-6 shadow-2xl text-slate-100 max-h-[92vh] flex flex-col print:max-w-none print:border-none print:bg-white print:text-black print:p-0 print:max-h-none">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto animate-in fade-in print:p-0 print:bg-white">
+      <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-3xl p-4 sm:p-6 shadow-2xl text-slate-100 max-h-[90dvh] flex flex-col print:max-w-none print:border-none print:bg-white print:text-black print:p-0 print:max-h-none pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
         {/* Modal Top Bar (Hidden on print) */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800 print:hidden flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
@@ -502,14 +418,58 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
             </div>
           </div>
 
+          {/* STATISTICHE TIRI DAI 7 METRI SEPARATE PER SQUADRA (FIGH) */}
+          <div className="border border-slate-700 print:border-black rounded-2xl p-3 bg-slate-950/60 print:bg-white">
+            <h5 className="text-xs font-bold text-cyan-400 print:text-black mb-2 uppercase flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Target className="w-3.5 h-3.5 text-cyan-400 print:text-black" /> Statistiche Tiri dai 7 Metri (Rigori di Squadra)
+              </span>
+            </h5>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px] border-collapse font-mono">
+                <thead>
+                  <tr className="border-b border-slate-800 print:border-black text-slate-400 print:text-black text-left">
+                    <th className="py-1 px-2 font-sans">Squadra</th>
+                    <th className="py-1 px-2 text-center">Tirati</th>
+                    <th className="py-1 px-2 text-center text-emerald-400 print:text-black font-bold">Segnati</th>
+                    <th className="py-1 px-2 text-center text-cyan-300 print:text-black">Parati</th>
+                    <th className="py-1 px-2 text-center text-amber-300 print:text-black">Fuori</th>
+                    <th className="py-1 px-2 text-center text-purple-300 print:text-black">Palo</th>
+                    <th className="py-1 px-2 text-center text-amber-400 print:text-black font-bold">% Realizz.</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 print:divide-gray-200">
+                  <tr className="text-slate-200 print:text-black">
+                    <td className="py-1.5 px-2 font-sans font-bold text-red-400 print:text-black">{matchState.homeTeam.name} (Casa)</td>
+                    <td className="py-1.5 px-2 text-center">{sevenMeterResult.home.attempted}</td>
+                    <td className="py-1.5 px-2 text-center font-bold text-emerald-400 print:text-black">{sevenMeterResult.home.scored}</td>
+                    <td className="py-1.5 px-2 text-center text-cyan-300 print:text-black">{sevenMeterResult.home.saved}</td>
+                    <td className="py-1.5 px-2 text-center text-amber-300 print:text-black">{sevenMeterResult.home.missed}</td>
+                    <td className="py-1.5 px-2 text-center text-purple-300 print:text-black">{sevenMeterResult.home.post}</td>
+                    <td className="py-1.5 px-2 text-center font-bold text-amber-400 print:text-black">{sevenMeterResult.home.efficiencyPct}%</td>
+                  </tr>
+                  <tr className="text-slate-200 print:text-black">
+                    <td className="py-1.5 px-2 font-sans font-bold text-blue-400 print:text-black">{matchState.awayTeam.name} (Ospiti)</td>
+                    <td className="py-1.5 px-2 text-center">{sevenMeterResult.away.attempted}</td>
+                    <td className="py-1.5 px-2 text-center font-bold text-emerald-400 print:text-black">{sevenMeterResult.away.scored}</td>
+                    <td className="py-1.5 px-2 text-center text-cyan-300 print:text-black">{sevenMeterResult.away.saved}</td>
+                    <td className="py-1.5 px-2 text-center text-amber-300 print:text-black">{sevenMeterResult.away.missed}</td>
+                    <td className="py-1.5 px-2 text-center text-purple-300 print:text-black">{sevenMeterResult.away.post}</td>
+                    <td className="py-1.5 px-2 text-center font-bold text-amber-400 print:text-black">{sevenMeterResult.away.efficiencyPct}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Goalkeepers Performance Section (Gol Parati, Gol Subiti, Gol Fatti, % Efficienza) */}
           <div className="border border-slate-700 print:border-black rounded-2xl p-3 bg-slate-950/60 print:bg-white">
             <h5 className="text-xs font-bold text-emerald-400 print:text-black mb-2 uppercase flex items-center justify-between">
               <span className="flex items-center gap-1">
-                <Shield className="w-3.5 h-3.5 text-emerald-400 print:text-black" /> Rendimento Portieri &amp; Statistiche Efficienza
+                <Shield className="w-3.5 h-3.5 text-emerald-400 print:text-black" /> Rendimento Portieri &amp; Statistiche Efficienza FIGH
               </span>
               <span className="text-[10px] text-slate-400 font-normal">
-                {combinedGkList.length} portier{combinedGkList.length === 1 ? 'e' : 'i'} in distinta
+                Gol Subiti = Risultato Avversario
               </span>
             </h5>
             <div className="overflow-x-auto">
@@ -532,10 +492,10 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
                     combinedGkList.map(s => {
                       const isH = s.team === 'home';
                       return (
-                        <tr key={`${s.team}_${s.number}_${s.name}`} className="text-slate-300 print:text-black">
+                        <tr key={`${s.team}_${s.playerId}_${s.playerNumber}`} className="text-slate-300 print:text-black">
                           <td className="py-1 px-2 font-bold">{isH ? matchState.homeTeam.name : matchState.awayTeam.name}</td>
-                          <td className="py-1 px-2 font-mono font-bold">#{s.number} {s.name}</td>
-                          <td className="py-1 px-2 text-[10px] text-slate-400 print:text-gray-600">{s.role}</td>
+                          <td className="py-1 px-2 font-mono font-bold">#{s.playerNumber} {s.playerName}</td>
+                          <td className="py-1 px-2 text-[10px] text-slate-400 print:text-gray-600">Portiere</td>
                           <td className="py-1 px-2 text-center font-mono font-bold text-emerald-400 print:text-black">{s.saves}</td>
                           <td className="py-1 px-2 text-center font-mono text-teal-400 print:text-black">{s.penaltySaves || 0}</td>
                           <td className="py-1 px-2 text-center font-mono text-rose-400 print:text-black">{s.goalsConceded}</td>
@@ -552,14 +512,41 @@ export const OfficialReportModal: React.FC<OfficialReportModalProps> = ({
                       </td>
                     </tr>
                   )}
+                  {/* Righe Porta Vuota se presenti */}
+                  {gkStatsResult.home.emptyNetGoalsConceded > 0 && (
+                    <tr className="bg-amber-950/20 text-amber-300 print:text-black font-mono">
+                      <td className="py-1 px-2 font-sans font-bold">{matchState.homeTeam.name}</td>
+                      <td className="py-1 px-2">🚨 Porta Vuota (7v6)</td>
+                      <td className="py-1 px-2 text-[10px]">-</td>
+                      <td className="py-1 px-2 text-center">-</td>
+                      <td className="py-1 px-2 text-center">-</td>
+                      <td className="py-1 px-2 text-center text-rose-400 font-bold">{gkStatsResult.home.emptyNetGoalsConceded}</td>
+                      <td className="py-1 px-2 text-center">{gkStatsResult.home.emptyNetGoalsConceded}</td>
+                      <td className="py-1 px-2 text-center">0.0%</td>
+                      <td className="py-1 px-2 text-center">-</td>
+                    </tr>
+                  )}
+                  {gkStatsResult.away.emptyNetGoalsConceded > 0 && (
+                    <tr className="bg-amber-950/20 text-amber-300 print:text-black font-mono">
+                      <td className="py-1 px-2 font-sans font-bold">{matchState.awayTeam.name}</td>
+                      <td className="py-1 px-2">🚨 Porta Vuota (7v6)</td>
+                      <td className="py-1 px-2 text-[10px]">-</td>
+                      <td className="py-1 px-2 text-center">-</td>
+                      <td className="py-1 px-2 text-center">-</td>
+                      <td className="py-1 px-2 text-center text-rose-400 font-bold">{gkStatsResult.away.emptyNetGoalsConceded}</td>
+                      <td className="py-1 px-2 text-center">{gkStatsResult.away.emptyNetGoalsConceded}</td>
+                      <td className="py-1 px-2 text-center">0.0%</td>
+                      <td className="py-1 px-2 text-center">-</td>
+                    </tr>
+                  )}
                 </tbody>
                 {combinedGkList.length > 0 && (
                   <tfoot>
                     {(() => {
                       const totSaves = combinedGkList.reduce((acc, g) => acc + g.saves, 0);
-                      const totPen = combinedGkList.reduce((acc, g) => acc + g.penaltySaves, 0);
-                      const totConceded = combinedGkList.reduce((acc, g) => acc + g.goalsConceded, 0);
-                      const totShots = combinedGkList.reduce((acc, g) => acc + g.totalShots, 0);
+                      const totPen = combinedGkList.reduce((acc, g) => acc + (g.penaltySaves || 0), 0);
+                      const totConceded = combinedGkList.reduce((acc, g) => acc + g.goalsConceded, 0) + gkStatsResult.home.emptyNetGoalsConceded + gkStatsResult.away.emptyNetGoalsConceded;
+                      const totShots = totSaves + totConceded;
                       const totScored = combinedGkList.reduce((acc, g) => acc + g.goalsScored, 0);
                       const avgPct = totShots > 0 ? ((totSaves / totShots) * 100).toFixed(1) : '0.0';
                       return (

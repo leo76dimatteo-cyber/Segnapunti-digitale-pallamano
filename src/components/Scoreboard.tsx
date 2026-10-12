@@ -7,7 +7,7 @@ import {
   Pause, 
   RotateCcw, 
   Plus, 
-  Minus,
+  Minus, 
   Undo2, 
   Clock, 
   ShieldAlert, 
@@ -16,7 +16,8 @@ import {
   Volume2,
   Shield,
   SlidersHorizontal,
-  FileText
+  FileText,
+  Target
 } from 'lucide-react';
 
 interface ScoreboardProps {
@@ -33,6 +34,7 @@ interface ScoreboardProps {
   onOpenGoalkeepers?: () => void;
   onOpenManualTimer?: () => void;
   onOpenReport?: () => void;
+  onOpenSevenMeterModal?: (team: 'home' | 'away') => void;
 }
 
 export const Scoreboard: React.FC<ScoreboardProps> = ({
@@ -49,10 +51,14 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
   onOpenGoalkeepers,
   onOpenManualTimer,
   onOpenReport,
+  onOpenSevenMeterModal,
 }) => {
   const currentCategory = CATEGORIES[matchState.settings.category] || CATEGORIES.under_14;
   const isU14 = currentCategory.isU14Format;
   const totalSaves = matchState.goalkeeperStats?.reduce((acc, c) => acc + c.saves, 0) || 0;
+
+  const homeLabel = matchState.homeTeam.shortName || 'CASA';
+  const awayLabel = matchState.awayTeam.shortName || 'OSPITI';
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(Math.max(0, seconds) / 60);
@@ -60,54 +66,39 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const lastGoal = matchState.goals.length > 0 ? matchState.goals[matchState.goals.length - 1] : null;
   const hasRecentGoals = matchState.goals.length > 0;
-  const lastGoal = hasRecentGoals ? matchState.goals[matchState.goals.length - 1] : null;
 
   return (
-    <div className="w-full bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xl relative overflow-hidden">
-      {/* Decorative top bar */}
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-600 via-amber-500 to-blue-600 opacity-80" />
+    <div className="bg-slate-900/95 border border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xl relative overflow-hidden backdrop-blur-md">
+      {/* Background Accent Gradients */}
+      <div className="absolute -top-24 -left-24 w-60 h-60 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Period and Match Phase Header */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800/80">
-        <div className="flex items-center gap-2">
-          <span className="flex h-2.5 w-2.5 relative">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${
-              matchState.isTimerRunning ? 'bg-emerald-400 opacity-75' : 'bg-amber-400 opacity-0'
-            }`}></span>
-            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-              matchState.isTimerRunning ? 'bg-emerald-500' : 'bg-slate-500'
-            }`}></span>
+      {/* MATCH STATUS & CONTROLS HEADER */}
+      <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-800 text-xs flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-bold flex items-center gap-1.5 text-[11px]">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            {matchState.isMatchOver 
+              ? 'GARA CONCLUSA' 
+              : matchState.isInterval 
+              ? `INTERVALLO / RECUPERO (${currentCategory.intervalDurationMinutes}m)` 
+              : `${matchState.currentPeriod}° TEMPO (di ${currentCategory.totalPeriods})`}
           </span>
-          <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">
-            {matchState.isMatchOver ? (
-              <span className="text-amber-400 font-extrabold">🏆 GARA CONCLUSA</span>
-            ) : matchState.isInterval ? (
-              <span className="text-blue-400 font-semibold">☕ INTERVALLO / RECUPERO ({formatTimer(matchState.intervalSecondsRemaining)})</span>
-            ) : (
-              <span>
-                {matchState.currentPeriod}° TEMPO <span className="text-slate-500 text-xs">di {matchState.settings.totalPeriods}</span>
-              </span>
-            )}
+
+          <span className="text-[11px] text-slate-400 font-medium hidden md:inline">
+            {currentCategory.name} • {matchState.settings.championship}
           </span>
         </div>
 
-        {/* U14 Specific Badge */}
-        {isU14 && (
-          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full text-[11px] font-semibold text-amber-300">
-            <Award className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Punti Tempo:</span>
-            <span className="font-mono font-bold">1 pt vittoria | 0.5 pt pareggio</span>
-          </div>
-        )}
-
-        {/* Period advance / status button */}
-        <div className="flex items-center gap-2">
+        {/* Period advance / status button / Report PDF */}
+        <div className="flex items-center gap-2 flex-wrap">
           {matchState.isMatchOver && onOpenReport && (
             <button
               onClick={onOpenReport}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition active:scale-95 flex items-center gap-1.5 shadow-md shadow-amber-500/20"
-              title="Apri referto ufficiale di gara & Genera PDF"
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition active:scale-95"
+              title="Apri e visualizza referto ufficiale gara"
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Referto PDF</span>
@@ -116,41 +107,36 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
 
           <button
             onClick={onClosePeriodOrNext}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm ${
               matchState.isMatchOver
-                ? 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                : matchState.periodSecondsRemaining === 0
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 animate-pulse font-extrabold shadow-lg shadow-amber-500/20'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-amber-500/10'
             }`}
           >
             <span>
-              {matchState.isMatchOver 
-                ? 'Riapri Ultimo Tempo' 
+              {matchState.isMatchOver
+                ? 'Riapri Partita'
                 : matchState.isInterval
-                ? `Inizia ${matchState.currentPeriod}° Tempo`
-                : isU14
-                ? `Chiudi ${matchState.currentPeriod}° Tempo`
-                : matchState.currentPeriod < matchState.settings.totalPeriods
-                ? `Fine ${matchState.currentPeriod}° Tempo`
-                : 'Termina Partita'}
+                ? `Inizia ${matchState.currentPeriod + 1}° Tempo`
+                : `Chiudi ${matchState.currentPeriod}° Tempo`}
             </span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Main Scoreboard Layout: On mobile portrait, Timer is full-width on top (order-1), Home (order-2) & Away (order-3) 50% each side-by-side. On desktop (sm+), 3 equal columns side-by-side */}
+      {/* MAIN SCOREBOARD GRID */}
       <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center">
         {/* HOME TEAM COLUMN */}
-        <div className="col-span-6 sm:col-span-4 order-2 sm:order-1 flex flex-col items-center text-center p-2 sm:p-3 rounded-2xl bg-slate-950/60 border border-red-900/30">
-          <div className="flex items-center gap-1.5 mb-1 max-w-full">
-            <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></span>
-            <span className="font-black text-sm sm:text-base text-red-400 truncate tracking-wide">
+        <div className="col-span-12 sm:col-span-4 order-2 sm:order-1 bg-red-950/20 sm:bg-transparent rounded-2xl p-2.5 sm:p-0 border border-red-900/30 sm:border-0 flex flex-col items-center text-center">
+          {/* Team Name */}
+          <div className="flex items-center gap-2 max-w-full justify-center">
+            <span className="w-3 h-3 rounded-full bg-red-500 shadow-sm flex-shrink-0" />
+            <span className="font-extrabold text-sm sm:text-lg text-slate-100 truncate">
               {matchState.homeTeam.name}
             </span>
           </div>
-          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">CASA</span>
+          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">CASA</span>
 
           {/* Home Score Value */}
           <div className="my-1 sm:my-2">
@@ -177,44 +163,56 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             </div>
           )}
 
-          {/* Action buttons for Home: Goal + Sanction + Timeout */}
-          <div className="w-full mt-2 space-y-2">
+          {/* Action buttons for Home: Goal + 7m + Sanction + Timeout */}
+          <div className="w-full mt-2 space-y-1.5">
             <div className="flex items-center gap-1.5 w-full">
+              {/* Bottone GOL SEMPRE ESPLICITO */}
               <button
                 id="btn-goal-home"
                 onClick={() => onGoalClick('home')}
-                className="flex-1 min-h-[50px] sm:min-h-[64px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-sm sm:text-xl rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
-                title="Aggiungi Gol Squadra Casa (+1 GOL)"
+                className="flex-1 min-h-[48px] sm:min-h-[58px] bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-sm sm:text-lg rounded-2xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-1.5 transition select-none"
+                title={`Aggiungi Gol a ${matchState.homeTeam.name}`}
               >
-                <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
-                <span className="hidden xs:inline sm:inline">GOL CASA</span>
-                <span className="xs:hidden sm:hidden">+1 GOL</span>
+                <Plus className="w-5 h-5 stroke-[3]" />
+                <span>GOL {homeLabel}</span>
               </button>
 
               <button
                 id="btn-subtract-goal-home"
                 onClick={() => onSubtractGoal('home')}
                 disabled={(isU14 ? matchState.homePeriodGoals : matchState.homeTotalGoals) <= 0}
-                className="min-w-[70px] sm:min-w-[82px] min-h-[50px] sm:min-h-[64px] px-2.5 bg-red-950/90 hover:bg-red-900 border-2 border-red-700/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-red-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-1 transition select-none shadow-md shadow-red-950/40"
+                className="min-w-[62px] sm:min-w-[76px] min-h-[48px] sm:min-h-[58px] px-2 bg-red-950/90 hover:bg-red-900 border-2 border-red-700/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-red-200 hover:text-white font-black text-xs rounded-2xl flex items-center justify-center gap-0.5 transition select-none shadow-md shadow-red-950/40"
                 title="Sottrai 1 Gol a Casa (-1 GOL)"
               >
-                <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
-                <span>-1 GOL</span>
+                <Minus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>-1</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 w-full">
+            <div className="grid grid-cols-3 gap-1.5 w-full">
+              {/* Tasto 7 Metri Casa */}
+              <button
+                type="button"
+                onClick={() => onOpenSevenMeterModal && onOpenSevenMeterModal('home')}
+                className="min-h-[40px] py-1.5 px-1 bg-cyan-950/80 hover:bg-cyan-900 active:scale-95 text-cyan-200 hover:text-white rounded-xl text-xs font-black border border-cyan-700/80 flex items-center justify-center gap-1 shadow-sm"
+                title="Registra tiro dai 7 Metri per Casa"
+              >
+                <Target className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
+                <span>7m</span>
+              </button>
+
               <button
                 onClick={() => onOpenSanctionModal('home')}
-                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[40px] py-1.5 px-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Assegna sanzione o cartellino a Casa"
               >
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                 <span className="truncate">Cartellino</span>
               </button>
+
               <button
                 onClick={() => onTriggerTimeout('home')}
-                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[40px] py-1.5 px-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Chiama Time-Out 1 minuto per Casa"
               >
                 <Clock className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
@@ -224,9 +222,9 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
           </div>
         </div>
 
-        {/* CENTER COLUMN: TIMER, CONTROLS, UNDO (Full width on mobile top, center column on desktop) */}
-        <div className="col-span-12 sm:col-span-4 order-1 sm:order-2 flex flex-col items-center justify-center text-center p-2.5 sm:p-0 bg-slate-950/40 sm:bg-transparent rounded-2xl border border-slate-800/60 sm:border-0 mb-1 sm:mb-0">
-          {/* Main Digital Match Clock (Clickable for manual editing) */}
+        {/* CENTER COLUMN: TIMER, CONTROLS, UNDO */}
+        <div className="col-span-12 sm:col-span-4 order-1 sm:order-2 flex flex-col items-center justify-center text-center p-2.5 sm:p-0 bg-slate-950/60 sm:bg-transparent rounded-2xl border border-slate-800/80 sm:border-0 mb-1 sm:mb-0">
+          {/* Main Digital Match Clock */}
           <div className="flex flex-col items-center">
             <button
               type="button"
@@ -255,12 +253,12 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             </button>
           </div>
 
-          {/* Timer Action Buttons */}
+          {/* Primary Timer Action Buttons */}
           <div className="flex items-center gap-2 mt-2 sm:mt-3">
             <button
               id="btn-timer-toggle"
               onClick={onToggleTimer}
-              className={`min-w-[120px] sm:min-w-[130px] h-11 sm:h-14 px-4 sm:px-5 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition active:scale-95 ${
+              className={`min-w-[120px] sm:min-w-[130px] h-12 sm:h-14 px-4 sm:px-5 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition active:scale-95 ${
                 matchState.isTimerRunning
                   ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
@@ -283,7 +281,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             <button
               id="btn-timer-reset"
               onClick={onResetTimer}
-              className="w-11 sm:w-12 h-11 sm:h-14 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl flex items-center justify-center border border-slate-700 transition active:scale-95"
+              className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl flex items-center justify-center border border-slate-700 transition active:scale-95"
               title="Azzera tempo del periodo"
             >
               <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -292,76 +290,56 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             <button
               id="btn-manual-buzzer"
               onClick={() => sound.playBuzzer()}
-              className="w-11 sm:w-12 h-11 sm:h-14 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center transition active:scale-95 shadow-sm"
+              className="w-12 h-12 sm:w-14 sm:h-14 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center transition active:scale-95 shadow-sm"
               title="Suona Sirena da Tavolo / Campo ad alto volume"
             >
               <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
-          {/* Time adjustment: Decrements (-1m, -10s, -1s) and Increments (+1s, +10s, +1m) + Regola modal */}
+          {/* Time adjustment controls: compatti con pulsante "Regola" */}
           <div className="flex items-center gap-1 sm:gap-1.5 mt-2 flex-wrap justify-center select-none">
-            <button
-              id="btn-timer-sub-1m"
-              onClick={() => onAdjustTime(-60)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
-              title="Sottrai 1 minuto (-60s)"
-            >
-              -1m
-            </button>
-            <button
-              id="btn-timer-sub-10s"
-              onClick={() => onAdjustTime(-10)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
-              title="Sottrai 10 secondi (-10s)"
-            >
-              -10s
-            </button>
-            <button
-              id="btn-timer-sub-1s"
-              onClick={() => onAdjustTime(-1)}
-              className="px-2 py-1.5 bg-red-950/70 hover:bg-red-900 active:scale-95 text-red-200 hover:text-white rounded-lg text-[11px] font-mono font-black border border-red-700/80 transition min-w-[36px] text-center shadow-sm"
-              title="Sottrai 1 secondo (-1s)"
-            >
-              -1s
-            </button>
-
-            <span className="text-slate-600 text-xs font-mono">•</span>
-
-            <button
-              id="btn-timer-add-1s"
-              onClick={() => onAdjustTime(1)}
-              className="px-2 py-1.5 bg-emerald-950/70 hover:bg-emerald-900 active:scale-95 text-emerald-200 hover:text-white rounded-lg text-[11px] font-mono font-black border border-emerald-600/80 transition min-w-[36px] text-center shadow-sm"
-              title="Aggiungi 1 secondo (+1s)"
-            >
-              +1s
-            </button>
-            <button
-              id="btn-timer-add-10s"
-              onClick={() => onAdjustTime(10)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
-              title="Aggiungi 10 secondi (+10s)"
-            >
-              +10s
-            </button>
-            <button
-              id="btn-timer-add-1m"
-              onClick={() => onAdjustTime(60)}
-              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[11px] font-mono border border-slate-700 transition min-w-[34px] text-center"
-              title="Aggiungi 1 minuto (+60s)"
-            >
-              +1m
-            </button>
+            {/* Su desktop mostriamo anche gli stepper rapidi */}
+            <div className="hidden sm:flex items-center gap-1">
+              <button
+                onClick={() => onAdjustTime(-60)}
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[10px] font-mono border border-slate-700 transition"
+                title="Sottrai 1 minuto (-60s)"
+              >
+                -1m
+              </button>
+              <button
+                onClick={() => onAdjustTime(-1)}
+                className="px-2 py-1 bg-red-950/70 hover:bg-red-900 active:scale-95 text-red-200 rounded-lg text-[10px] font-mono font-bold border border-red-700/80 transition"
+                title="Sottrai 1 secondo (-1s)"
+              >
+                -1s
+              </button>
+              <button
+                onClick={() => onAdjustTime(1)}
+                className="px-2 py-1 bg-emerald-950/70 hover:bg-emerald-900 active:scale-95 text-emerald-200 rounded-lg text-[10px] font-mono font-bold border border-emerald-600/80 transition"
+                title="Aggiungi 1 secondo (+1s)"
+              >
+                +1s
+              </button>
+              <button
+                onClick={() => onAdjustTime(60)}
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-lg text-[10px] font-mono border border-slate-700 transition"
+                title="Aggiungi 1 minuto (+60s)"
+              >
+                +1m
+              </button>
+            </div>
 
             {onOpenManualTimer && (
               <button
                 id="btn-open-manual-timer"
                 onClick={onOpenManualTimer}
-                className="px-2 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-300 rounded-lg text-[11px] font-bold border border-amber-500/40 transition flex items-center gap-1 shadow-sm"
-                title="Apri pannello completo modifica manuale cronometro (±1s, MM:SS, preset)"
+                className="px-2.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-300 rounded-xl text-xs font-bold border border-amber-500/40 transition flex items-center gap-1.5 shadow-sm"
+                title="Apri pannello completo modifica manuale cronometro"
               >
-                <SlidersHorizontal className="w-3 h-3 text-amber-400 flex-shrink-0" />
-                <span>Regola</span>
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span>Regola Tempo</span>
               </button>
             )}
           </div>
@@ -373,7 +351,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
                 id="btn-scoreboard-goalkeepers"
                 onClick={onOpenGoalkeepers}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/50 active:scale-95 text-emerald-300 text-xs font-bold rounded-xl transition shadow-sm"
-                title="Funzione Portieri: Gol Parati, Gol Subiti, Gol Fatti e Statistica %"
+                title="Funzione Portieri: Gol Parati, Gol Subiti e Statistiche"
               >
                 <Shield className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Portieri</span>
@@ -390,11 +368,11 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
                 id="btn-undo-last-goal"
                 onClick={onUndoLastGoal}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-amber-300 text-xs font-semibold rounded-xl border border-slate-700 transition shadow-sm max-w-full truncate"
-                title="Annulla l'ultimo gol segnato (correzione errori)"
+                title="Annulla l'ultimo gol segnato"
               >
                 <Undo2 className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">
-                  Annulla Gol ({lastGoal?.team === 'home' ? matchState.homeTeam.shortName : matchState.awayTeam.shortName})
+                  Annulla Gol ({lastGoal?.team === 'home' ? homeLabel : awayLabel})
                 </span>
               </button>
             )}
@@ -402,14 +380,15 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
         </div>
 
         {/* AWAY TEAM COLUMN */}
-        <div className="col-span-6 sm:col-span-4 order-3 sm:order-3 flex flex-col items-center text-center p-2 sm:p-3 rounded-2xl bg-slate-950/60 border border-blue-900/30">
-          <div className="flex items-center gap-1.5 mb-1 max-w-full">
-            <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></span>
-            <span className="font-black text-sm sm:text-base text-blue-400 truncate tracking-wide">
+        <div className="col-span-12 sm:col-span-4 order-3 sm:order-3 bg-blue-950/20 sm:bg-transparent rounded-2xl p-2.5 sm:p-0 border border-blue-900/30 sm:border-0 flex flex-col items-center text-center">
+          {/* Team Name */}
+          <div className="flex items-center gap-2 max-w-full justify-center">
+            <span className="w-3 h-3 rounded-full bg-blue-500 shadow-sm flex-shrink-0" />
+            <span className="font-extrabold text-sm sm:text-lg text-slate-100 truncate">
               {matchState.awayTeam.name}
             </span>
           </div>
-          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">OSPITI</span>
+          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">OSPITI</span>
 
           {/* Away Score Value */}
           <div className="my-1 sm:my-2">
@@ -436,44 +415,56 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({
             </div>
           )}
 
-          {/* Action buttons for Away: Goal + Sanction + Timeout */}
-          <div className="w-full mt-2 space-y-2">
+          {/* Action buttons for Away: Goal + 7m + Sanction + Timeout */}
+          <div className="w-full mt-2 space-y-1.5">
             <div className="flex items-center gap-1.5 w-full">
+              {/* Bottone GOL SEMPRE ESPLICITO */}
               <button
                 id="btn-goal-away"
                 onClick={() => onGoalClick('away')}
-                className="flex-1 min-h-[50px] sm:min-h-[64px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-sm sm:text-xl rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
-                title="Aggiungi Gol Squadra Ospiti (+1 GOL)"
+                className="flex-1 min-h-[48px] sm:min-h-[58px] bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-sm sm:text-lg rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5 transition select-none"
+                title={`Aggiungi Gol a ${matchState.awayTeam.name}`}
               >
-                <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3]" />
-                <span className="hidden xs:inline sm:inline">GOL OSPITI</span>
-                <span className="xs:hidden sm:hidden">+1 GOL</span>
+                <Plus className="w-5 h-5 stroke-[3]" />
+                <span>GOL {awayLabel}</span>
               </button>
 
               <button
                 id="btn-subtract-goal-away"
                 onClick={() => onSubtractGoal('away')}
                 disabled={(isU14 ? matchState.awayPeriodGoals : matchState.awayTotalGoals) <= 0}
-                className="min-w-[70px] sm:min-w-[82px] min-h-[50px] sm:min-h-[64px] px-2.5 bg-blue-950/90 hover:bg-blue-900 border-2 border-blue-700/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-blue-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-1 transition select-none shadow-md shadow-blue-950/40"
+                className="min-w-[62px] sm:min-w-[76px] min-h-[48px] sm:min-h-[58px] px-2 bg-blue-950/90 hover:bg-blue-900 border-2 border-blue-700/80 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 text-blue-200 hover:text-white font-black text-xs rounded-2xl flex items-center justify-center gap-0.5 transition select-none shadow-md shadow-blue-950/40"
                 title="Sottrai 1 Gol a Ospiti (-1 GOL)"
               >
-                <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
-                <span>-1 GOL</span>
+                <Minus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>-1</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 w-full">
+            <div className="grid grid-cols-3 gap-1.5 w-full">
+              {/* Tasto 7 Metri Ospiti */}
+              <button
+                type="button"
+                onClick={() => onOpenSevenMeterModal && onOpenSevenMeterModal('away')}
+                className="min-h-[40px] py-1.5 px-1 bg-cyan-950/80 hover:bg-cyan-900 active:scale-95 text-cyan-200 hover:text-white rounded-xl text-xs font-black border border-cyan-700/80 flex items-center justify-center gap-1 shadow-sm"
+                title="Registra tiro dai 7 Metri per Ospiti"
+              >
+                <Target className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
+                <span>7m</span>
+              </button>
+
               <button
                 onClick={() => onOpenSanctionModal('away')}
-                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[40px] py-1.5 px-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Assegna sanzione o cartellino a Ospiti"
               >
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                 <span className="truncate">Cartellino</span>
               </button>
+
               <button
                 onClick={() => onTriggerTimeout('away')}
-                className="min-h-[38px] py-1.5 px-1 sm:px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[10px] sm:text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
+                className="min-h-[40px] py-1.5 px-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-xl text-[11px] font-bold border border-slate-700 flex items-center justify-center gap-1"
                 title="Chiama Time-Out 1 minuto per Ospiti"
               >
                 <Clock className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />

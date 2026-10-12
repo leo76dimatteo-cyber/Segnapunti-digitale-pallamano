@@ -1,5 +1,6 @@
 import { MatchState, MatchSettings, Team, Player, CategoryId } from '../types';
 import { CATEGORIES } from './categories';
+import { reconcileMatchState } from './matchSelectors';
 
 const MATCH_STATE_KEY = 'figh_handball_match_state_v1';
 const SAVED_ROSTERS_KEY = 'figh_handball_saved_rosters_v1';
@@ -78,9 +79,11 @@ export function createInitialMatchState(category: CategoryId = 'under_14'): Matc
     activeSuspensions: [],
     goals: [],
     sanctions: [],
+    sevenMeterEvents: [],
     activeTimeout: null,
     goalkeeperStats: [],
     activeGoalkeepers: { home: null, away: null },
+    emptyNet: { home: false, away: false },
     createdAt: now,
     updatedAt: now,
   };
@@ -91,7 +94,7 @@ export function loadMatchState(): MatchState {
   try {
     const raw = localStorage.getItem(MATCH_STATE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as MatchState;
+      let parsed = JSON.parse(raw) as MatchState;
       // Basic sanity checks
       if (parsed.settings && parsed.homeTeam && parsed.awayTeam) {
         let modified = false;
@@ -138,6 +141,21 @@ export function loadMatchState(): MatchState {
         }
         if (!parsed.activeGoalkeepers) {
           parsed.activeGoalkeepers = { home: null, away: null };
+          modified = true;
+        }
+        if (!parsed.sevenMeterEvents) {
+          parsed.sevenMeterEvents = [];
+          modified = true;
+        }
+        if (!parsed.emptyNet) {
+          parsed.emptyNet = { home: false, away: false };
+          modified = true;
+        }
+
+        // Reconcile goalkeeper concessions and 7m events
+        const reconciled = reconcileMatchState(parsed);
+        if (reconciled !== parsed) {
+          parsed = reconciled;
           modified = true;
         }
 

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { MatchState, GoalkeeperStat } from '../types';
 import { CATEGORIES } from './categories';
+import { computeGoalkeeperStats, computeSevenMeterStats } from './matchSelectors';
 
 /**
  * Genera ed esporta il referto ufficiale di gara in formato PDF conforme agli standard FIGH
@@ -341,99 +342,59 @@ export function generateMatchReportPDF(state: MatchState): void {
 
   curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
 
-  // --- 6. GOALKEEPER STATISTICS TABLE (STATISTICHE PORTIERI) ---
-  // Ensure we collect all goalkeepers from both teams
-  const gkList: Array<{
-    team: 'home' | 'away';
-    teamName: string;
-    number: number;
-    name: string;
-    role: string;
-    saves: number;
-    penaltySaves: number;
-    goalsConceded: number;
-    totalShots: number;
-    efficiencyPct: string;
-    goalsScored: number;
-  }> = [];
+  // --- 6. SEVEN-METER TEAM STATISTICS TABLE (STATISTICHE 7 METRI FIGH) ---
+  const sevenMeterSummary = computeSevenMeterStats(state);
+  const smTableRows: (string | number)[][] = [
+    [
+      `${state.homeTeam.name} (CASA)`,
+      sevenMeterSummary.home.attempted.toString(),
+      sevenMeterSummary.home.scored.toString(),
+      sevenMeterSummary.home.saved.toString(),
+      sevenMeterSummary.home.missed.toString(),
+      sevenMeterSummary.home.post.toString(),
+      `${sevenMeterSummary.home.efficiencyPct}%`
+    ],
+    [
+      `${state.awayTeam.name} (OSPITI)`,
+      sevenMeterSummary.away.attempted.toString(),
+      sevenMeterSummary.away.scored.toString(),
+      sevenMeterSummary.away.saved.toString(),
+      sevenMeterSummary.away.missed.toString(),
+      sevenMeterSummary.away.post.toString(),
+      `${sevenMeterSummary.away.efficiencyPct}%`
+    ]
+  ];
 
-  const existingStats = state.goalkeeperStats || [];
+  if (curY > 215) {
+    doc.addPage();
+    curY = 15;
+  }
 
-  // Home Team Goalkeepers
-  state.homeTeam.players.forEach(p => {
-    if (p.role === 'Portiere' || existingStats.some(s => s.team === 'home' && s.playerId === p.id)) {
-      const stat = existingStats.find(s => s.team === 'home' && s.playerId === p.id);
-      const saves = stat ? stat.saves : 0;
-      const penaltySaves = stat ? (stat.penaltySaves || 0) : 0;
-      const goalsConceded = stat ? stat.goalsConceded : 0;
-      const goalsScored = stat ? stat.goalsScored : 0;
-      const totalShots = saves + goalsConceded;
-      const efficiencyPct = totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) + '%' : '0.0%';
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(8, 145, 178); // cyan-600
+  doc.text('STATISTICHE TIRI DAI 7 METRI (RIGORI DI SQUADRA FIGH)', marginX, curY + 3);
 
-      gkList.push({
-        team: 'home',
-        teamName: state.homeTeam.name,
-        number: p.number,
-        name: p.name,
-        role: p.role || 'Portiere',
-        saves,
-        penaltySaves,
-        goalsConceded,
-        totalShots,
-        efficiencyPct,
-        goalsScored
-      });
-    }
+  autoTable(doc, {
+    startY: curY + 4.5,
+    head: [['Squadra', 'Tirati', 'Segnati', 'Parati', 'Fuori', 'Palo/Traversa', '% Realizzazione']],
+    body: smTableRows,
+    theme: 'grid',
+    headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+    bodyStyles: { fontSize: 6.8, textColor: [15, 23, 42], halign: 'center' },
+    columnStyles: {
+      0: { cellWidth: 50, halign: 'left', fontStyle: 'bold' },
+      2: { fontStyle: 'bold', textColor: [4, 120, 87] },
+      6: { fontStyle: 'bold', textColor: [180, 83, 9] }
+    },
+    margin: { left: marginX, right: marginX }
   });
 
-  // Away Team Goalkeepers
-  state.awayTeam.players.forEach(p => {
-    if (p.role === 'Portiere' || existingStats.some(s => s.team === 'away' && s.playerId === p.id)) {
-      const stat = existingStats.find(s => s.team === 'away' && s.playerId === p.id);
-      const saves = stat ? stat.saves : 0;
-      const penaltySaves = stat ? (stat.penaltySaves || 0) : 0;
-      const goalsConceded = stat ? stat.goalsConceded : 0;
-      const goalsScored = stat ? stat.goalsScored : 0;
-      const totalShots = saves + goalsConceded;
-      const efficiencyPct = totalShots > 0 ? ((saves / totalShots) * 100).toFixed(1) + '%' : '0.0%';
+  curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
 
-      gkList.push({
-        team: 'away',
-        teamName: state.awayTeam.name,
-        number: p.number,
-        name: p.name,
-        role: p.role || 'Portiere',
-        saves,
-        penaltySaves,
-        goalsConceded,
-        totalShots,
-        efficiencyPct,
-        goalsScored
-      });
-    }
-  });
-
-  // Any other tracked goalkeepers not found in roster list
-  existingStats.forEach(s => {
-    const alreadyIncluded = gkList.some(g => g.team === s.team && g.number === s.playerNumber && g.name === s.playerName);
-    if (!alreadyIncluded) {
-      const totalShots = s.saves + s.goalsConceded;
-      const efficiencyPct = totalShots > 0 ? ((s.saves / totalShots) * 100).toFixed(1) + '%' : '0.0%';
-      gkList.push({
-        team: s.team,
-        teamName: s.team === 'home' ? state.homeTeam.name : state.awayTeam.name,
-        number: s.playerNumber,
-        name: s.playerName,
-        role: 'Portiere',
-        saves: s.saves,
-        penaltySaves: s.penaltySaves || 0,
-        goalsConceded: s.goalsConceded,
-        totalShots,
-        efficiencyPct,
-        goalsScored: s.goalsScored || 0
-      });
-    }
-  });
+  // --- 7. GOALKEEPER STATISTICS TABLE (STATISTICHE PORTIERI DERIVATE) ---
+  const gkStatsComputed = computeGoalkeeperStats(state);
+  const allDerivedGk = gkStatsComputed.allStats;
 
   if (curY > 210) {
     doc.addPage();
@@ -443,44 +404,76 @@ export function generateMatchReportPDF(state: MatchState): void {
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(5, 150, 105); // emerald-600
-  doc.text('STATISTICHE & RENDIMENTO PORTIERI (Parate, Rigori 7m, % Efficienza)', marginX, curY + 3);
+  doc.text('STATISTICHE & RENDIMENTO PORTIERI (Gol Subiti = Risultato Avversario)', marginX, curY + 3);
 
   const gkTableRows: (string | number)[][] = [];
 
-  if (gkList.length > 0) {
+  if (allDerivedGk.length > 0) {
     let totSaves = 0;
     let totPenSaves = 0;
     let totConceded = 0;
     let totShots = 0;
     let totScored = 0;
 
-    gkList.forEach(gk => {
+    allDerivedGk.forEach(gk => {
       totSaves += gk.saves;
-      totPenSaves += gk.penaltySaves;
+      totPenSaves += (gk.penaltySaves || 0);
       totConceded += gk.goalsConceded;
       totShots += gk.totalShots;
       totScored += gk.goalsScored;
 
+      const teamName = gk.team === 'home' ? state.homeTeam.name : state.awayTeam.name;
+
       gkTableRows.push([
-        gk.teamName,
-        `#${gk.number}`,
-        gk.name,
-        gk.role === 'Portiere' ? 'Portiere' : 'Gioc. di Movimento',
+        teamName,
+        `#${gk.playerNumber}`,
+        gk.playerName,
         gk.saves.toString(),
-        gk.penaltySaves.toString(),
+        (gk.penaltySaves || 0).toString(),
         gk.goalsConceded.toString(),
         gk.totalShots.toString(),
-        gk.efficiencyPct,
+        `${gk.efficiencyPct}%`,
         gk.goalsScored.toString()
       ]);
     });
+
+    // Righe Porta Vuota se presenti
+    if (gkStatsComputed.home.emptyNetGoalsConceded > 0) {
+      totConceded += gkStatsComputed.home.emptyNetGoalsConceded;
+      totShots += gkStatsComputed.home.emptyNetGoalsConceded;
+      gkTableRows.push([
+        state.homeTeam.name,
+        '-',
+        'Porta Vuota (7v6)',
+        '0',
+        '0',
+        gkStatsComputed.home.emptyNetGoalsConceded.toString(),
+        gkStatsComputed.home.emptyNetGoalsConceded.toString(),
+        '0.0%',
+        '0'
+      ]);
+    }
+    if (gkStatsComputed.away.emptyNetGoalsConceded > 0) {
+      totConceded += gkStatsComputed.away.emptyNetGoalsConceded;
+      totShots += gkStatsComputed.away.emptyNetGoalsConceded;
+      gkTableRows.push([
+        state.awayTeam.name,
+        '-',
+        'Porta Vuota (7v6)',
+        '0',
+        '0',
+        gkStatsComputed.away.emptyNetGoalsConceded.toString(),
+        gkStatsComputed.away.emptyNetGoalsConceded.toString(),
+        '0.0%',
+        '0'
+      ]);
+    }
 
     const totEfficiency = totShots > 0 ? ((totSaves / totShots) * 100).toFixed(1) + '%' : '0.0%';
     gkTableRows.push([
       'RIEPILOGO TOTALE',
       '-',
       'Tutti i portieri',
-      '-',
       totSaves.toString(),
       totPenSaves.toString(),
       totConceded.toString(),
@@ -489,31 +482,30 @@ export function generateMatchReportPDF(state: MatchState): void {
       totScored.toString()
     ]);
   } else {
-    gkTableRows.push(['-', '-', 'Nessun portiere registrato in distinta o con statistiche tracciate', '-', '0', '0', '0', '0', '0.0%', '0']);
+    gkTableRows.push(['-', '-', 'Nessun portiere registrato in distinta', '0', '0', '0', '0', '0.0%', '0']);
   }
 
   autoTable(doc, {
     startY: curY + 4.5,
-    head: [['Squadra', 'N°', 'Portiere', 'Ruolo', 'Parate', 'Rigori 7m', 'Gol Subiti', 'Tiri Affr.', '% Efficienza', 'Gol Fatti']],
+    head: [['Squadra', 'N°', 'Portiere', 'Parate', 'Rigori 7m', 'Gol Subiti', 'Tiri Affr.', '% Efficienza', 'Gol Fatti']],
     body: gkTableRows,
     theme: 'grid',
     headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
     bodyStyles: { fontSize: 6.8, textColor: [15, 23, 42] },
     columnStyles: {
-      0: { cellWidth: 34, fontStyle: 'bold' },
-      1: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
-      2: { cellWidth: 38 },
-      3: { cellWidth: 26, fontSize: 6.2 },
-      4: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+      0: { cellWidth: 42, fontStyle: 'bold' },
+      1: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+      2: { cellWidth: 46 },
+      3: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+      4: { cellWidth: 17, halign: 'center' },
       5: { cellWidth: 16, halign: 'center' },
-      6: { cellWidth: 15, halign: 'center' },
-      7: { cellWidth: 15, halign: 'center' },
-      8: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
-      9: { cellWidth: 12, halign: 'center' }
+      6: { cellWidth: 16, halign: 'center' },
+      7: { cellWidth: 17, halign: 'center', fontStyle: 'bold' },
+      8: { cellWidth: 14, halign: 'center' }
     },
     margin: { left: marginX, right: marginX },
     didParseCell: (data) => {
-      if (gkList.length > 0 && data.row.index === gkTableRows.length - 1) {
+      if (allDerivedGk.length > 0 && data.row.index === gkTableRows.length - 1) {
         data.cell.styles.fillColor = [236, 253, 245]; // emerald-50
         data.cell.styles.textColor = [4, 120, 87]; // emerald-700
         data.cell.styles.fontStyle = 'bold';

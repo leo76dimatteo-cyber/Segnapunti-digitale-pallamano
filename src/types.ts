@@ -66,6 +66,26 @@ export interface GoalEvent {
   awayPeriodScore: number;
   homeTotalGoals: number;
   awayTotalGoals: number;
+  concededByGoalkeeperId?: string | null; // null = porta vuota o nessun portiere
+  isSevenMeter?: boolean;
+  sevenMeterEventId?: string;
+}
+
+export type SevenMeterOutcome = 'goal' | 'saved' | 'missed' | 'post';
+
+export interface SevenMeterEvent {
+  id: string;
+  team: 'home' | 'away'; // squadra tiratrice
+  period: number;
+  minute: number;
+  second: number;
+  shooterId?: string;
+  shooterNumber?: number;
+  shooterName?: string;
+  goalkeeperId?: string | null; // portiere avversario in porta al momento del tiro
+  outcome: SevenMeterOutcome;
+  timestamp: number;
+  goalEventId?: string;
 }
 
 export interface SanctionEvent {
@@ -157,6 +177,7 @@ export interface MatchState {
   // Event Logs
   goals: GoalEvent[];
   sanctions: SanctionEvent[];
+  sevenMeterEvents?: SevenMeterEvent[];
 
   // Timeouts active
   activeTimeout: {
@@ -187,6 +208,7 @@ export interface GoalkeeperStat {
   team: 'home' | 'away';
   saves: number;         // Gol parati totali
   penaltySaves?: number; // Rigori 7m parati
+  legacyPenaltySaves?: number;
   goalsConceded: number; // Gol subiti
   goalsScored: number;   // Gol fatti (es. porta a porta / porta vuota)
 }
