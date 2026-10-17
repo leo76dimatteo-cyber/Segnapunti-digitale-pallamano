@@ -1,7 +1,8 @@
 {
   "name": "figh-handball-scorer",
+  "description": "Referto Digitale da Bordocampo & Tabellone Segnapunti per la Pallamano conforme FIGH (format U14 Circolare 47, statistiche portieri, rigori 7m, gestione sanzioni ed export PDF/HTML/JSON).",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
